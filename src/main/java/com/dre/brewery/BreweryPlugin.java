@@ -82,7 +82,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Getter
-public final class BreweryPlugin extends JavaPlugin {
+// Not final: MockBukkit subclasses the plugin's main class to give it a class loader Paper
+// accepts, which is how the brew simulation tests bring BreweryX up headlessly.
+public class BreweryPlugin extends JavaPlugin {
 
     private @Getter static AddonManager addonManager;
     private @Getter static TaskScheduler scheduler;

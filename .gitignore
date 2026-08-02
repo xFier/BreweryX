@@ -35,3 +35,6 @@
 # Gradle
 .gradle/
 run/
+
+# Brew simulation test spec, generated from src/test/resources/brew-tests.default.yml
+/brew-tests.yml

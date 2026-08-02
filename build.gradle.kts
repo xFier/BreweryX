@@ -45,6 +45,10 @@ val langVersion: Int = 21
 val runTaskJavaVersion: Int = 25
 val encoding: String = "UTF-8"
 
+// Declarative brew simulation tests, see the `brewTest` task.
+val brewSpecTemplateName: String = "brew-tests.default.yml"
+val brewSpecFileName: String = providers.gradleProperty("brewSpec").getOrElse("brew-tests.yml")
+
 repositories {
     mavenCentral()
     maven("https://repo.jsinco.dev/releases") // UniversalScheduler
@@ -125,8 +129,16 @@ dependencies {
     compileOnly("net.countercraft:movecraft:8.0.0_beta-6") //https://hangar.papermc.io/Airship-Pirates/Movecraft
 
 
-    testImplementation(platform("org.junit:junit-bom:5.9.1"))
+    testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // Headless Bukkit implementation for the brew simulation tests. MockBukkit's v1.21 branch
+    // targets 1.21.11, matching our spigot-api, but does not declare the server API itself, so
+    // paper-api has to be supplied here. paper-api supersedes spigot-api, which must therefore
+    // NOT be added to the test classpath as well.
+    testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v1.21:4.110.0")
+    testImplementation("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+    testCompileOnly("org.jetbrains:annotations:26.0.1")
 }
 
 
@@ -144,6 +156,57 @@ tasks {
     }
     test {
         useJUnitPlatform()
+        // brewTest owns these; `gradle build` should not need a spec file to exist.
+        exclude("**/BrewSpecTest.class")
+    }
+
+    register<Test>("brewTest") {
+        group = "verification"
+        description = "Runs the brew simulations declared in $brewSpecFileName against their expectations."
+
+        val specFile = layout.projectDirectory.file(brewSpecFileName).asFile
+        val template = layout.projectDirectory.file("src/test/resources/$brewSpecTemplateName").asFile
+
+        testClassesDirs = sourceSets.test.get().output.classesDirs
+        classpath = sourceSets.test.get().runtimeClasspath
+        useJUnitPlatform()
+        filter { includeTestsMatching("com.dre.brewery.simulate.BrewSpecTest") }
+
+        systemProperty("brewery.spec.file", specFile.absolutePath)
+        providers.gradleProperty("breweryConfig").orNull?.let {
+            systemProperty("brewery.config.dir", file(it).absolutePath)
+        }
+
+        // The spec is hand-edited, so never let Gradle decide the answer is unchanged.
+        outputs.upToDateWhen { false }
+
+        testLogging {
+            events(
+                org.gradle.api.tasks.testing.logging.TestLogEvent.PASSED,
+                org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED,
+                org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
+            )
+            showStandardStreams = true
+            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        }
+
+        doFirst {
+            if (!specFile.exists()) {
+                if (!template.exists()) {
+                    throw GradleException(
+                        "No brew test spec at ${specFile.absolutePath}, and the bundled template " +
+                            "${template.absolutePath} is missing too, so one cannot be created for you."
+                    )
+                }
+                template.copyTo(specFile)
+                val exampleCount = specFile.readLines().count { it.trimStart().startsWith("- name:") }
+                logger.lifecycle("")
+                logger.lifecycle("Created ${specFile.absolutePath}")
+                logger.lifecycle("  It has $exampleCount worked examples to edit or replace; running them now.")
+                logger.lifecycle("  Every key it accepts is documented in the comments at the top of the file.")
+                logger.lifecycle("")
+            }
+        }
     }
 
     processResources {
