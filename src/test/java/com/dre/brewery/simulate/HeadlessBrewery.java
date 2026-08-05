@@ -33,11 +33,14 @@ import com.dre.brewery.recipe.BRecipe;
 import com.dre.brewery.recipe.CustomItem;
 import com.dre.brewery.recipe.PluginItem;
 import com.dre.brewery.recipe.SimpleItem;
+import org.bukkit.plugin.InvalidDescriptionException;
+import org.bukkit.plugin.PluginDescriptionFile;
 import org.jetbrains.annotations.Nullable;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
@@ -94,6 +97,13 @@ public final class HeadlessBrewery {
         ServerMock server = MockBukkit.mock();
         started = true;
 
+        // The data folder has to be seeded before the plugin is *constructed*, not merely before
+        // it is enabled: BreweryPlugin's instance initializer calls TranslationManager against
+        // getDataFolder(), so Okaeri creates config.yml and holds it open while the constructor
+        // runs. Copying afterwards fails outright on Windows, where that open handle makes the
+        // file undeletable. Everything is copied, so the real server's files are never touched.
+        Path seededDataFolder = sourceConfigDir == null ? null : seedDataFolder(server, sourceConfigDir);
+
         // loadPlugin() reads plugin.yml off the classpath and runs onLoad(), but not onEnable().
         plugin = (BreweryPlugin) server.getPluginManager().loadPlugin(BreweryPlugin.class);
         if (BreweryPlugin.getInstance() != plugin) {
@@ -102,14 +112,7 @@ public final class HeadlessBrewery {
                     + "MockBukkit's proxy class loader has forked the plugin's static state, so the "
                     + "config singletons this fixture sets up are not the ones the brewing code reads.");
         }
-
-        // Seed the mock data folder before the first ConfigManager call, which is what constructs
-        // ConfigHead against it and lets Okaeri write its defaults. Everything is copied, so the
-        // real server's files are never rewritten.
-        if (sourceConfigDir != null) {
-            copyConfig(sourceConfigDir, plugin.getDataFolder().toPath());
-            TranslationManager.newInstance(plugin.getDataFolder()); // re-read `language`
-        }
+        assertSeedWasRead(seededDataFolder);
 
         // Everything below mirrors BreweryPlugin.onEnable(), in the same order.
         CustomItem.registerItemLoader(plugin);
@@ -153,6 +156,59 @@ public final class HeadlessBrewery {
      */
     public static String configSource() {
         return configSource;
+    }
+
+    /**
+     * Copies the config into the folder MockBukkit is going to hand the plugin, before there is a
+     * plugin to hand it to.
+     * <p>
+     * MockBukkit names a plugin's data folder after its {@code plugin.yml}, so the path can be
+     * worked out — and claimed — ahead of the plugin that will use it. That is a guess about
+     * MockBukkit's internals, so {@link #assertSeedWasRead} checks it afterwards rather than
+     * letting a wrong guess quietly run the whole suite against the built-in recipes.
+     *
+     * @return the folder that was seeded
+     */
+    private static Path seedDataFolder(ServerMock server, Path sourceConfigDir) {
+        PluginDescriptionFile description = pluginDescription();
+        Path dataFolder;
+        try {
+            dataFolder = server.getPluginManager()
+                .createTemporaryDirectory(description.getName() + "-" + description.getVersion())
+                .toPath();
+        } catch (IOException e) {
+            throw new BootstrapException("Could not create a data folder to put the config in", e);
+        }
+        copyConfig(sourceConfigDir, dataFolder);
+        return dataFolder.toAbsolutePath().normalize();
+    }
+
+    private static PluginDescriptionFile pluginDescription() {
+        try (InputStream in = HeadlessBrewery.class.getClassLoader().getResourceAsStream("plugin.yml")) {
+            if (in == null) {
+                throw new BootstrapException("No plugin.yml on the classpath to read the plugin's name from.");
+            }
+            return new PluginDescriptionFile(in);
+        } catch (IOException | InvalidDescriptionException e) {
+            throw new BootstrapException("Could not read plugin.yml off the classpath", e);
+        }
+    }
+
+    /**
+     * Fails if MockBukkit gave the plugin a different folder than the one the config went into,
+     * which would mean the recipes came from BreweryX's defaults while every message claimed
+     * otherwise.
+     */
+    private static void assertSeedWasRead(@Nullable Path seededDataFolder) {
+        if (seededDataFolder == null) {
+            return;
+        }
+        Path actual = plugin.getDataFolder().toPath().toAbsolutePath().normalize();
+        if (!actual.equals(seededDataFolder)) {
+            throw new BootstrapException("The config was copied to " + seededDataFolder
+                + ", but MockBukkit gave the plugin " + actual + ", so it was never read. "
+                + "MockBukkit has changed how it names data folders; seedDataFolder() has to follow.");
+        }
     }
 
     private static void validateConfigDir(Path dir) {

@@ -1,0 +1,3847 @@
+# =====================================================================================
+#  Generated brew tests
+#
+#  Written by:   gradlew brewTest -Pexpand
+#
+#  These are the `checks:` from your spec, spelled out with the numbers they worked out
+#  to. Commit this file and they become a fixed baseline: unlike the `checks:` they came
+#  from, they do not re-derive themselves, so they notice if the brewing engine's own
+#  arithmetic changes underneath them.
+#
+#  Edit freely -- but a re-run of `-Pexpand` overwrites the whole file, so move anything
+#  you want to keep into your own spec first.
+# =====================================================================================
+#
+#  Recipes from: BreweryX defaults
+#  Cases: 459
+
+tests:
+
+  # wheatbeer   difficulty 1   cook 8m   age 2y Birch   alcohol 5
+  # brewed exactly as the recipe asks
+  - name: "wheatbeer / perfect"
+    recipe: "wheatbeer"
+    expect:
+      recipe: "wheatbeer"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: 5
+      ageTime: 2
+      wood: "BIRCH"
+
+  # the longest cook that still matches
+  - name: "wheatbeer / cook-longest"
+    recipe: "wheatbeer"
+    cook: 16
+    expect:
+      recipe: "wheatbeer"
+      quality: 8
+      worstDefect: "CookTimeMismatch{16/8}"
+
+  # one minute over that, so it no longer matches
+  - name: "wheatbeer / cook-too-long"
+    recipe: "wheatbeer"
+    cook: 17
+    expect:
+      notRecipe: "wheatbeer"
+
+  # one item short of the first ingredient
+  - name: "wheatbeer / count-one-under"
+    recipe: "wheatbeer"
+    ingredients: [wheat/2]
+    expect:
+      recipe: "wheatbeer"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "wheatbeer / count-one-over"
+    recipe: "wheatbeer"
+    ingredients: [wheat/4]
+    expect:
+      recipe: "wheatbeer"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "wheatbeer / count-limit"
+    recipe: "wheatbeer"
+    ingredients: [wheat/11]
+    expect:
+      recipe: "beer"
+      quality: 9
+
+  # one item past that, so it no longer matches
+  - name: "wheatbeer / count-beyond-limit"
+    recipe: "wheatbeer"
+    ingredients: [wheat/12]
+    expect:
+      notRecipe: "wheatbeer"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "wheatbeer / ingredient-missing"
+    recipe: "wheatbeer"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "wheatbeer"
+
+  # distilled though the recipe never asked for it
+  - name: "wheatbeer / distill-unwanted"
+    recipe: "wheatbeer"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # left in the barrel half a tolerance too long
+  - name: "wheatbeer / age-over"
+    recipe: "wheatbeer"
+    age:
+      - { wood: BIRCH, years: 12 }
+    expect:
+      recipe: "wheatbeer"
+      quality: 9
+      ageTime: 12
+
+  # left in so long the age factor bottoms out
+  - name: "wheatbeer / age-beyond"
+    recipe: "wheatbeer"
+    age:
+      - { wood: BIRCH, years: 23 }
+    expect:
+      recipe: "wheatbeer"
+      quality: 7
+      ageTime: 23
+
+  # never barrelled, though the recipe wants it
+  - name: "wheatbeer / age-none"
+    recipe: "wheatbeer"
+    age: []
+    expect:
+      ageTime: 0
+      notRecipe: "wheatbeer"
+
+  # aged in the wood next to the one it wants
+  - name: "wheatbeer / wood-neighbour"
+    recipe: "wheatbeer"
+    age:
+      - { wood: OAK, years: 2 }
+    expect:
+      recipe: "wheatbeer"
+      quality: 10
+      wood: "OAK"
+
+  # aged in the wood furthest from the one it wants
+  - name: "wheatbeer / wood-worst"
+    recipe: "wheatbeer"
+    age:
+      - { wood: PALE_OAK, years: 2 }
+    expect:
+      recipe: "beer"
+      quality: 9
+      wood: "PALE_OAK"
+
+
+  # ap_mead   difficulty 4   cook 4m   age 4y Oak   alcohol 11
+  # brewed exactly as the recipe asks
+  - name: "ap_mead / perfect"
+    recipe: "ap_mead"
+    expect:
+      recipe: "ap_mead"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: 11
+      ageTime: 4
+      wood: "OAK"
+
+  # the longest cook that still matches
+  - name: "ap_mead / cook-longest"
+    recipe: "ap_mead"
+    cook: 10
+    expect:
+      recipe: "ap_mead"
+      quality: 8
+      worstDefect: "CookTimeMismatch{10/4}"
+
+  # one minute over that, so it no longer matches
+  - name: "ap_mead / cook-too-long"
+    recipe: "ap_mead"
+    cook: 11
+    expect:
+      notRecipe: "ap_mead"
+
+  # one item short of the first ingredient
+  - name: "ap_mead / count-one-under"
+    recipe: "ap_mead"
+    ingredients: [sugar_cane/5, apple/2]
+    expect:
+      recipe: "ap_mead"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "ap_mead / count-one-over"
+    recipe: "ap_mead"
+    ingredients: [sugar_cane/7, apple/2]
+    expect:
+      recipe: "ap_mead"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "ap_mead / count-limit"
+    recipe: "ap_mead"
+    ingredients: [sugar_cane/12, apple/2]
+    expect:
+      recipe: "ap_mead"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "ap_mead / count-beyond-limit"
+    recipe: "ap_mead"
+    ingredients: [sugar_cane/13, apple/2]
+    expect:
+      notRecipe: "ap_mead"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "ap_mead / ingredient-missing"
+    recipe: "ap_mead"
+    ingredients: [apple/2]
+    expect:
+      notRecipe: "ap_mead"
+
+  # distilled though the recipe never asked for it
+  - name: "ap_mead / distill-unwanted"
+    recipe: "ap_mead"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # pulled from the barrel half a tolerance early
+  - name: "ap_mead / age-under"
+    recipe: "ap_mead"
+    age:
+      - { wood: OAK, years: 1.5000 }
+    expect:
+      recipe: "ap_mead"
+      quality: 9
+      ageTime: 1.5000
+
+  # left in the barrel half a tolerance too long
+  - name: "ap_mead / age-over"
+    recipe: "ap_mead"
+    age:
+      - { wood: OAK, years: 6.5000 }
+    expect:
+      recipe: "ap_mead"
+      quality: 9
+      ageTime: 6.5000
+
+  # never barrelled, though the recipe wants it
+  - name: "ap_mead / age-none"
+    recipe: "ap_mead"
+    age: []
+    expect:
+      ageTime: 0
+      notRecipe: "ap_mead"
+
+  # aged in the wood next to the one it wants
+  - name: "ap_mead / wood-neighbour"
+    recipe: "ap_mead"
+    age:
+      - { wood: BIRCH, years: 4 }
+    expect:
+      recipe: "ap_mead"
+      quality: 9
+      wood: "BIRCH"
+
+  # aged in the wood furthest from the one it wants
+  - name: "ap_mead / wood-worst"
+    recipe: "ap_mead"
+    age:
+      - { wood: PALE_OAK, years: 4 }
+    expect:
+      recipe: "ap_mead"
+      quality: 7
+      wood: "PALE_OAK"
+
+
+  # hot_choc   difficulty 2   cook 2m   alcohol 0
+  # brewed exactly as the recipe asks
+  - name: "hot_choc / perfect"
+    recipe: "hot_choc"
+    expect:
+      recipe: "hot_choc"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: 0
+      ageTime: 0
+
+  # the longest cook that still matches
+  - name: "hot_choc / cook-longest"
+    recipe: "hot_choc"
+    cook: 9
+    expect:
+      recipe: "hot_choc"
+      quality: 5
+      worstDefect: "CookTimeMismatch{9/2}"
+
+  # one minute over that, so it no longer matches
+  - name: "hot_choc / cook-too-long"
+    recipe: "hot_choc"
+    cook: 10
+    expect:
+      notRecipe: "hot_choc"
+
+  # one item short of the first ingredient
+  - name: "hot_choc / count-one-under"
+    recipe: "hot_choc"
+    ingredients: [cookie/2]
+    expect:
+      recipe: "hot_choc"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "hot_choc / count-one-over"
+    recipe: "hot_choc"
+    ingredients: [cookie/4]
+    expect:
+      recipe: "hot_choc"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "hot_choc / count-limit"
+    recipe: "hot_choc"
+    ingredients: [cookie/10]
+    expect:
+      recipe: "hot_choc"
+      quality: 5
+
+  # one item past that, so it no longer matches
+  - name: "hot_choc / count-beyond-limit"
+    recipe: "hot_choc"
+    ingredients: [cookie/11]
+    expect:
+      notRecipe: "hot_choc"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "hot_choc / ingredient-missing"
+    recipe: "hot_choc"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "hot_choc"
+
+  # distilled though the recipe never asked for it
+  - name: "hot_choc / distill-unwanted"
+    recipe: "hot_choc"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # barrelled though the recipe never asked for it
+  - name: "hot_choc / age-unwanted"
+    recipe: "hot_choc"
+    age:
+      - { wood: OAK, years: 5 }
+    expect:
+      notRecipe: "hot_choc"
+      ageTime: 5
+
+
+  # apple_liquor   difficulty 5   cook 16m   distill 3   age 6y Acacia   alcohol 14
+  # brewed exactly as the recipe asks
+  - name: "apple_liquor / perfect"
+    recipe: "apple_liquor"
+    expect:
+      recipe: "apple_liquor"
+      quality: 10
+      defects: []
+      distillRuns: 3
+      alcohol: 14
+      ageTime: 6
+      wood: "ACACIA"
+
+  # the shortest cook that still matches
+  - name: "apple_liquor / cook-shortest"
+    recipe: "apple_liquor"
+    cook: 6
+    expect:
+      recipe: "apple_liquor"
+      quality: 8
+      worstDefect: "CookTimeMismatch{6/16}"
+
+  # one minute under that, so it no longer matches
+  - name: "apple_liquor / cook-too-short"
+    recipe: "apple_liquor"
+    cook: 5
+    expect:
+      notRecipe: "apple_liquor"
+
+  # the longest cook that still matches
+  - name: "apple_liquor / cook-longest"
+    recipe: "apple_liquor"
+    cook: 26
+    expect:
+      recipe: "apple_liquor"
+      quality: 8
+      worstDefect: "CookTimeMismatch{26/16}"
+
+  # one minute over that, so it no longer matches
+  - name: "apple_liquor / cook-too-long"
+    recipe: "apple_liquor"
+    cook: 27
+    expect:
+      notRecipe: "apple_liquor"
+
+  # one item short of the first ingredient
+  - name: "apple_liquor / count-one-under"
+    recipe: "apple_liquor"
+    ingredients: [apple/11]
+    expect:
+      recipe: "apple_liquor"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "apple_liquor / count-one-over"
+    recipe: "apple_liquor"
+    ingredients: [apple/13]
+    expect:
+      recipe: "apple_liquor"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "apple_liquor / count-limit"
+    recipe: "apple_liquor"
+    ingredients: [apple/19]
+    expect:
+      recipe: "apple_liquor"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "apple_liquor / count-beyond-limit"
+    recipe: "apple_liquor"
+    ingredients: [apple/20]
+    expect:
+      notRecipe: "apple_liquor"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "apple_liquor / ingredient-missing"
+    recipe: "apple_liquor"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "apple_liquor"
+
+  # never distilled, though the recipe wants it
+  - name: "apple_liquor / distill-none"
+    recipe: "apple_liquor"
+    distill: 0
+    expect:
+      notRecipe: "apple_liquor"
+
+  # one run short, which costs alcohol but not quality
+  - name: "apple_liquor / distill-fewer"
+    recipe: "apple_liquor"
+    distill: 2
+    expect:
+      recipe: "apple_liquor"
+      quality: 10
+      distillRuns: 2
+      alcohol: 11
+
+  # one run too many, which adds alcohol but not quality
+  - name: "apple_liquor / distill-more"
+    recipe: "apple_liquor"
+    distill: 4
+    expect:
+      recipe: "apple_liquor"
+      quality: 10
+      distillRuns: 4
+      alcohol: 16
+
+  # pulled from the barrel half a tolerance early
+  - name: "apple_liquor / age-under"
+    recipe: "apple_liquor"
+    age:
+      - { wood: ACACIA, years: 4 }
+    expect:
+      recipe: "apple_liquor"
+      quality: 9
+      ageTime: 4
+
+  # left in the barrel half a tolerance too long
+  - name: "apple_liquor / age-over"
+    recipe: "apple_liquor"
+    age:
+      - { wood: ACACIA, years: 8 }
+    expect:
+      recipe: "apple_liquor"
+      quality: 9
+      ageTime: 8
+
+  # left in so long the age factor bottoms out
+  - name: "apple_liquor / age-beyond"
+    recipe: "apple_liquor"
+    age:
+      - { wood: ACACIA, years: 11 }
+    expect:
+      recipe: "apple_liquor"
+      quality: 7
+      ageTime: 11
+
+  # never barrelled, though the recipe wants it
+  - name: "apple_liquor / age-none"
+    recipe: "apple_liquor"
+    age: []
+    expect:
+      ageTime: 0
+      recipe: "apple_liquor"
+      quality: 5
+
+  # aged in the wood next to the one it wants
+  - name: "apple_liquor / wood-neighbour"
+    recipe: "apple_liquor"
+    age:
+      - { wood: SPRUCE, years: 6 }
+    expect:
+      recipe: "apple_liquor"
+      quality: 9
+      wood: "SPRUCE"
+
+  # aged in the wood furthest from the one it wants
+  - name: "apple_liquor / wood-worst"
+    recipe: "apple_liquor"
+    age:
+      - { wood: PALE_OAK, years: 6 }
+    expect:
+      recipe: "apple_liquor"
+      quality: 7
+      wood: "PALE_OAK"
+
+
+  # gr_absinthe   difficulty 9   cook 5m   distill 6   alcohol 46
+  # brewed exactly as the recipe asks
+  - name: "gr_absinthe / perfect"
+    recipe: "gr_absinthe"
+    expect:
+      recipe: "gr_absinthe"
+      quality: 10
+      defects: []
+      distillRuns: 6
+      alcohol: 46
+      ageTime: 0
+
+  # the shortest cook that still matches
+  - name: "gr_absinthe / cook-shortest"
+    recipe: "gr_absinthe"
+    cook: 3
+    expect:
+      recipe: "gr_absinthe"
+      quality: 5
+      worstDefect: "CookTimeMismatch{3/5}"
+
+  # one minute under that, so it no longer matches
+  - name: "gr_absinthe / cook-too-short"
+    recipe: "gr_absinthe"
+    cook: 2
+    expect:
+      notRecipe: "gr_absinthe"
+
+  # the longest cook that still matches
+  - name: "gr_absinthe / cook-longest"
+    recipe: "gr_absinthe"
+    cook: 7
+    expect:
+      recipe: "gr_absinthe"
+      quality: 5
+      worstDefect: "CookTimeMismatch{7/5}"
+
+  # one minute over that, so it no longer matches
+  - name: "gr_absinthe / cook-too-long"
+    recipe: "gr_absinthe"
+    cook: 8
+    expect:
+      notRecipe: "gr_absinthe"
+
+  # one item short of the first ingredient
+  - name: "gr_absinthe / count-one-under"
+    recipe: "gr_absinthe"
+    ingredients: [short_grass/16, poisonous_potato/2]
+    expect:
+      recipe: "gr_absinthe"
+      quality: 9
+
+  # one item too many of the first ingredient
+  - name: "gr_absinthe / count-one-over"
+    recipe: "gr_absinthe"
+    ingredients: [short_grass/18, poisonous_potato/2]
+    expect:
+      recipe: "gr_absinthe"
+      quality: 9
+
+  # the most of the first ingredient that still matches
+  - name: "gr_absinthe / count-limit"
+    recipe: "gr_absinthe"
+    ingredients: [short_grass/20, poisonous_potato/2]
+    expect:
+      recipe: "gr_absinthe"
+      quality: 5
+
+  # one item past that, so it no longer matches
+  - name: "gr_absinthe / count-beyond-limit"
+    recipe: "gr_absinthe"
+    ingredients: [short_grass/21, poisonous_potato/2]
+    expect:
+      notRecipe: "gr_absinthe"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "gr_absinthe / ingredient-missing"
+    recipe: "gr_absinthe"
+    ingredients: [poisonous_potato/2]
+    expect:
+      notRecipe: "gr_absinthe"
+
+  # never distilled, though the recipe wants it
+  - name: "gr_absinthe / distill-none"
+    recipe: "gr_absinthe"
+    distill: 0
+    expect:
+      notRecipe: "gr_absinthe"
+
+  # one run short, which costs alcohol but not quality
+  - name: "gr_absinthe / distill-fewer"
+    recipe: "gr_absinthe"
+    distill: 5
+    expect:
+      recipe: "gr_absinthe"
+      quality: 10
+      distillRuns: 5
+      alcohol: 42
+
+  # one run too many, which adds alcohol but not quality
+  - name: "gr_absinthe / distill-more"
+    recipe: "gr_absinthe"
+    distill: 7
+    expect:
+      recipe: "gr_absinthe"
+      quality: 10
+      distillRuns: 7
+      alcohol: 49
+
+  # barrelled though the recipe never asked for it
+  - name: "gr_absinthe / age-unwanted"
+    recipe: "gr_absinthe"
+    age:
+      - { wood: OAK, years: 5 }
+    expect:
+      notRecipe: "gr_absinthe"
+      ageTime: 5
+
+
+  # potato_soup   difficulty 1   cook 3m   alcohol 0
+  # brewed exactly as the recipe asks
+  - name: "potato_soup / perfect"
+    recipe: "potato_soup"
+    expect:
+      recipe: "potato_soup"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: 0
+      ageTime: 0
+
+  # the longest cook that still matches
+  - name: "potato_soup / cook-longest"
+    recipe: "potato_soup"
+    cook: 11
+    expect:
+      recipe: "potato_soup"
+      quality: 5
+      worstDefect: "CookTimeMismatch{11/3}"
+
+  # one minute over that, so it no longer matches
+  - name: "potato_soup / cook-too-long"
+    recipe: "potato_soup"
+    cook: 12
+    expect:
+      notRecipe: "potato_soup"
+
+  # one item short of the first ingredient
+  - name: "potato_soup / count-one-under"
+    recipe: "potato_soup"
+    ingredients: [potato/4, short_grass/3]
+    expect:
+      recipe: "potato_soup"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "potato_soup / count-one-over"
+    recipe: "potato_soup"
+    ingredients: [potato/6, short_grass/3]
+    expect:
+      recipe: "potato_soup"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "potato_soup / count-limit"
+    recipe: "potato_soup"
+    ingredients: [potato/13, short_grass/3]
+    expect:
+      recipe: "potato_soup"
+      quality: 5
+
+  # one item past that, so it no longer matches
+  - name: "potato_soup / count-beyond-limit"
+    recipe: "potato_soup"
+    ingredients: [potato/14, short_grass/3]
+    expect:
+      notRecipe: "potato_soup"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "potato_soup / ingredient-missing"
+    recipe: "potato_soup"
+    ingredients: [short_grass/3]
+    expect:
+      notRecipe: "potato_soup"
+
+  # distilled though the recipe never asked for it
+  - name: "potato_soup / distill-unwanted"
+    recipe: "potato_soup"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # barrelled though the recipe never asked for it
+  - name: "potato_soup / age-unwanted"
+    recipe: "potato_soup"
+    age:
+      - { wood: OAK, years: 5 }
+    expect:
+      notRecipe: "potato_soup"
+      ageTime: 5
+
+
+  # iced_coffee   difficulty 4   cook 1m   alcohol -8
+  # brewed exactly as the recipe asks
+  - name: "iced_coffee / perfect"
+    recipe: "iced_coffee"
+    expect:
+      recipe: "iced_coffee"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: -8
+      ageTime: 0
+
+  # the longest cook that still matches
+  - name: "iced_coffee / cook-longest"
+    recipe: "iced_coffee"
+    cook: 7
+    expect:
+      recipe: "iced_coffee"
+      quality: 5
+      worstDefect: "CookTimeMismatch{7/1}"
+
+  # one minute over that, so it no longer matches
+  - name: "iced_coffee / cook-too-long"
+    recipe: "iced_coffee"
+    cook: 8
+    expect:
+      notRecipe: "iced_coffee"
+
+  # one item short of the first ingredient
+  - name: "iced_coffee / count-one-under"
+    recipe: "iced_coffee"
+    ingredients: [cookie/7, snowball/4, milk_bucket/1]
+    expect:
+      recipe: "iced_coffee"
+      quality: 9
+
+  # one item too many of the first ingredient
+  - name: "iced_coffee / count-one-over"
+    recipe: "iced_coffee"
+    ingredients: [cookie/9, snowball/4, milk_bucket/1]
+    expect:
+      recipe: "iced_coffee"
+      quality: 9
+
+  # the most of the first ingredient that still matches
+  - name: "iced_coffee / count-limit"
+    recipe: "iced_coffee"
+    ingredients: [cookie/14, snowball/4, milk_bucket/1]
+    expect:
+      recipe: "iced_coffee"
+      quality: 5
+
+  # one item past that, so it no longer matches
+  - name: "iced_coffee / count-beyond-limit"
+    recipe: "iced_coffee"
+    ingredients: [cookie/15, snowball/4, milk_bucket/1]
+    expect:
+      notRecipe: "iced_coffee"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "iced_coffee / ingredient-missing"
+    recipe: "iced_coffee"
+    ingredients: [snowball/4, milk_bucket/1]
+    expect:
+      notRecipe: "iced_coffee"
+
+  # distilled though the recipe never asked for it
+  - name: "iced_coffee / distill-unwanted"
+    recipe: "iced_coffee"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # barrelled though the recipe never asked for it
+  - name: "iced_coffee / age-unwanted"
+    recipe: "iced_coffee"
+    age:
+      - { wood: OAK, years: 5 }
+    expect:
+      notRecipe: "iced_coffee"
+      ageTime: 5
+
+
+  # mead   difficulty 2   cook 3m   age 4y Oak   alcohol 9
+  # brewed exactly as the recipe asks
+  - name: "mead / perfect"
+    recipe: "mead"
+    expect:
+      recipe: "mead"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: 9
+      ageTime: 4
+      wood: "OAK"
+
+  # the longest cook that still matches
+  - name: "mead / cook-longest"
+    recipe: "mead"
+    cook: 10
+    expect:
+      recipe: "mead"
+      quality: 8
+      worstDefect: "CookTimeMismatch{10/3}"
+
+  # one minute over that, so it no longer matches
+  - name: "mead / cook-too-long"
+    recipe: "mead"
+    cook: 11
+    expect:
+      notRecipe: "mead"
+
+  # one item short of the first ingredient
+  - name: "mead / count-one-under"
+    recipe: "mead"
+    ingredients: [sugar_cane/5]
+    expect:
+      recipe: "mead"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "mead / count-one-over"
+    recipe: "mead"
+    ingredients: [sugar_cane/7]
+    expect:
+      recipe: "mead"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "mead / count-limit"
+    recipe: "mead"
+    ingredients: [sugar_cane/13]
+    expect:
+      recipe: "mead"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "mead / count-beyond-limit"
+    recipe: "mead"
+    ingredients: [sugar_cane/14]
+    expect:
+      notRecipe: "mead"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "mead / ingredient-missing"
+    recipe: "mead"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "mead"
+
+  # distilled though the recipe never asked for it
+  - name: "mead / distill-unwanted"
+    recipe: "mead"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # left in the barrel half a tolerance too long
+  - name: "mead / age-over"
+    recipe: "mead"
+    age:
+      - { wood: OAK, years: 9 }
+    expect:
+      recipe: "mead"
+      quality: 9
+      ageTime: 9
+
+  # left in so long the age factor bottoms out
+  - name: "mead / age-beyond"
+    recipe: "mead"
+    age:
+      - { wood: OAK, years: 15 }
+    expect:
+      recipe: "mead"
+      quality: 7
+      ageTime: 15
+
+  # never barrelled, though the recipe wants it
+  - name: "mead / age-none"
+    recipe: "mead"
+    age: []
+    expect:
+      ageTime: 0
+      notRecipe: "mead"
+
+  # aged in the wood next to the one it wants
+  - name: "mead / wood-neighbour"
+    recipe: "mead"
+    age:
+      - { wood: BIRCH, years: 4 }
+    expect:
+      recipe: "mead"
+      quality: 10
+      wood: "BIRCH"
+
+  # aged in the wood furthest from the one it wants
+  - name: "mead / wood-worst"
+    recipe: "mead"
+    age:
+      - { wood: PALE_OAK, years: 4 }
+    expect:
+      recipe: "mead"
+      quality: 7
+      wood: "PALE_OAK"
+
+
+  # darkbeer   difficulty 2   cook 8m   age 8y Dark Oak   alcohol 7
+  # brewed exactly as the recipe asks
+  - name: "darkbeer / perfect"
+    recipe: "darkbeer"
+    expect:
+      recipe: "darkbeer"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: 7
+      ageTime: 8
+      wood: "DARK_OAK"
+
+  # the shortest cook that still matches
+  - name: "darkbeer / cook-shortest"
+    recipe: "darkbeer"
+    cook: 1
+    expect:
+      recipe: "darkbeer"
+      quality: 8
+      worstDefect: "CookTimeMismatch{1/8}"
+
+  # the longest cook that still matches
+  - name: "darkbeer / cook-longest"
+    recipe: "darkbeer"
+    cook: 15
+    expect:
+      recipe: "darkbeer"
+      quality: 8
+      worstDefect: "CookTimeMismatch{15/8}"
+
+  # one minute over that, so it no longer matches
+  - name: "darkbeer / cook-too-long"
+    recipe: "darkbeer"
+    cook: 16
+    expect:
+      notRecipe: "darkbeer"
+
+  # one item short of the first ingredient
+  - name: "darkbeer / count-one-under"
+    recipe: "darkbeer"
+    ingredients: [wheat/5]
+    expect:
+      recipe: "darkbeer"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "darkbeer / count-one-over"
+    recipe: "darkbeer"
+    ingredients: [wheat/7]
+    expect:
+      recipe: "darkbeer"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "darkbeer / count-limit"
+    recipe: "darkbeer"
+    ingredients: [wheat/13]
+    expect:
+      recipe: "darkbeer"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "darkbeer / count-beyond-limit"
+    recipe: "darkbeer"
+    ingredients: [wheat/14]
+    expect:
+      notRecipe: "darkbeer"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "darkbeer / ingredient-missing"
+    recipe: "darkbeer"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "darkbeer"
+
+  # distilled though the recipe never asked for it
+  - name: "darkbeer / distill-unwanted"
+    recipe: "darkbeer"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # left in the barrel half a tolerance too long
+  - name: "darkbeer / age-over"
+    recipe: "darkbeer"
+    age:
+      - { wood: DARK_OAK, years: 13 }
+    expect:
+      recipe: "darkbeer"
+      quality: 9
+      ageTime: 13
+
+  # never barrelled, though the recipe wants it
+  - name: "darkbeer / age-none"
+    recipe: "darkbeer"
+    age: []
+    expect:
+      ageTime: 0
+      notRecipe: "darkbeer"
+
+  # aged in the wood next to the one it wants
+  - name: "darkbeer / wood-neighbour"
+    recipe: "darkbeer"
+    age:
+      - { wood: ACACIA, years: 8 }
+    expect:
+      recipe: "darkbeer"
+      quality: 10
+      wood: "ACACIA"
+
+
+  # rum   difficulty 6   cook 6m   distill 2   age 14y Oak   alcohol 30
+  # brewed exactly as the recipe asks
+  - name: "rum / perfect"
+    recipe: "rum"
+    expect:
+      recipe: "rum"
+      quality: 10
+      defects: []
+      distillRuns: 2
+      alcohol: 30
+      ageTime: 14
+      wood: "OAK"
+
+  # the shortest cook that still matches
+  - name: "rum / cook-shortest"
+    recipe: "rum"
+    cook: 2
+    expect:
+      recipe: "rum"
+      quality: 8
+      worstDefect: "CookTimeMismatch{2/6}"
+
+  # one minute under that, so it no longer matches
+  - name: "rum / cook-too-short"
+    recipe: "rum"
+    cook: 1
+    expect:
+      notRecipe: "rum"
+
+  # the longest cook that still matches
+  - name: "rum / cook-longest"
+    recipe: "rum"
+    cook: 10
+    expect:
+      recipe: "rum"
+      quality: 8
+      worstDefect: "CookTimeMismatch{10/6}"
+
+  # one minute over that, so it no longer matches
+  - name: "rum / cook-too-long"
+    recipe: "rum"
+    cook: 11
+    expect:
+      notRecipe: "rum"
+
+  # one item short of the first ingredient
+  - name: "rum / count-one-under"
+    recipe: "rum"
+    ingredients: [sugar_cane/17]
+    expect:
+      recipe: "rum"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "rum / count-one-over"
+    recipe: "rum"
+    ingredients: [sugar_cane/19]
+    expect:
+      recipe: "rum"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "rum / count-limit"
+    recipe: "rum"
+    ingredients: [sugar_cane/27]
+    expect:
+      recipe: "rum"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "rum / count-beyond-limit"
+    recipe: "rum"
+    ingredients: [sugar_cane/28]
+    expect:
+      notRecipe: "rum"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "rum / ingredient-missing"
+    recipe: "rum"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "rum"
+
+  # never distilled, though the recipe wants it
+  - name: "rum / distill-none"
+    recipe: "rum"
+    distill: 0
+    expect:
+      notRecipe: "rum"
+
+  # one run short, which costs alcohol but not quality
+  - name: "rum / distill-fewer"
+    recipe: "rum"
+    distill: 1
+    expect:
+      recipe: "rum"
+      quality: 10
+      distillRuns: 1
+      alcohol: 22
+
+  # one run too many, which adds alcohol but not quality
+  - name: "rum / distill-more"
+    recipe: "rum"
+    distill: 3
+    expect:
+      recipe: "rum"
+      quality: 10
+      distillRuns: 3
+      alcohol: 37
+
+  # pulled from the barrel half a tolerance early
+  - name: "rum / age-under"
+    recipe: "rum"
+    age:
+      - { wood: OAK, years: 12.3333 }
+    expect:
+      recipe: "rum"
+      quality: 9
+      ageTime: 12.3333
+
+  # left in the barrel half a tolerance too long
+  - name: "rum / age-over"
+    recipe: "rum"
+    age:
+      - { wood: OAK, years: 15.6667 }
+    expect:
+      recipe: "rum"
+      quality: 9
+      ageTime: 15.6667
+
+  # left in so long the age factor bottoms out
+  - name: "rum / age-beyond"
+    recipe: "rum"
+    age:
+      - { wood: OAK, years: 18.3333 }
+    expect:
+      recipe: "rum"
+      quality: 7
+      ageTime: 18.3333
+
+  # never barrelled, though the recipe wants it
+  - name: "rum / age-none"
+    recipe: "rum"
+    age: []
+    expect:
+      ageTime: 0
+      recipe: "rum"
+      quality: 5
+
+  # aged in the wood next to the one it wants
+  - name: "rum / wood-neighbour"
+    recipe: "rum"
+    age:
+      - { wood: BIRCH, years: 14 }
+    expect:
+      recipe: "rum"
+      quality: 9
+      wood: "BIRCH"
+
+  # aged in the wood furthest from the one it wants
+  - name: "rum / wood-worst"
+    recipe: "rum"
+    age:
+      - { wood: PALE_OAK, years: 14 }
+    expect:
+      recipe: "rum"
+      quality: 7
+      wood: "PALE_OAK"
+
+
+  # gin   difficulty 6   cook 6m   distill 2   alcohol 20
+  # brewed exactly as the recipe asks
+  - name: "gin / perfect"
+    recipe: "gin"
+    expect:
+      recipe: "gin"
+      quality: 10
+      defects: []
+      distillRuns: 2
+      alcohol: 20
+      ageTime: 0
+
+  # the shortest cook that still matches
+  - name: "gin / cook-shortest"
+    recipe: "gin"
+    cook: 2
+    expect:
+      recipe: "gin"
+      quality: 5
+      worstDefect: "CookTimeMismatch{2/6}"
+
+  # one minute under that, so it no longer matches
+  - name: "gin / cook-too-short"
+    recipe: "gin"
+    cook: 1
+    expect:
+      notRecipe: "gin"
+
+  # the longest cook that still matches
+  - name: "gin / cook-longest"
+    recipe: "gin"
+    cook: 10
+    expect:
+      recipe: "gin"
+      quality: 5
+      worstDefect: "CookTimeMismatch{10/6}"
+
+  # one minute over that, so it no longer matches
+  - name: "gin / cook-too-long"
+    recipe: "gin"
+    cook: 11
+    expect:
+      notRecipe: "gin"
+
+  # one item short of the first ingredient
+  - name: "gin / count-one-under"
+    recipe: "gin"
+    ingredients: [wheat/8, blue-flowers/6, apple/1]
+    expect:
+      recipe: "gin"
+      quality: 9
+
+  # one item too many of the first ingredient
+  - name: "gin / count-one-over"
+    recipe: "gin"
+    ingredients: [wheat/10, blue-flowers/6, apple/1]
+    expect:
+      recipe: "gin"
+      quality: 9
+
+  # the most of the first ingredient that still matches
+  - name: "gin / count-limit"
+    recipe: "gin"
+    ingredients: [wheat/14, blue-flowers/6, apple/1]
+    expect:
+      recipe: "gin"
+      quality: 5
+
+  # one item past that, so it no longer matches
+  - name: "gin / count-beyond-limit"
+    recipe: "gin"
+    ingredients: [wheat/15, blue-flowers/6, apple/1]
+    expect:
+      notRecipe: "gin"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "gin / ingredient-missing"
+    recipe: "gin"
+    ingredients: [blue-flowers/6, apple/1]
+    expect:
+      notRecipe: "gin"
+
+  # never distilled, though the recipe wants it
+  - name: "gin / distill-none"
+    recipe: "gin"
+    distill: 0
+    expect:
+      notRecipe: "gin"
+
+  # one run short, which costs alcohol but not quality
+  - name: "gin / distill-fewer"
+    recipe: "gin"
+    distill: 1
+    expect:
+      recipe: "gin"
+      quality: 10
+      distillRuns: 1
+      alcohol: 15
+
+  # one run too many, which adds alcohol but not quality
+  - name: "gin / distill-more"
+    recipe: "gin"
+    distill: 3
+    expect:
+      recipe: "gin"
+      quality: 10
+      distillRuns: 3
+      alcohol: 25
+
+  # barrelled though the recipe never asked for it
+  - name: "gin / age-unwanted"
+    recipe: "gin"
+    age:
+      - { wood: OAK, years: 5 }
+    expect:
+      notRecipe: "gin"
+      ageTime: 5
+
+
+  # fire_whiskey   difficulty 7   cook 12m   distill 3   age 18y Spruce   alcohol 28
+  # brewed exactly as the recipe asks
+  - name: "fire_whiskey / perfect"
+    recipe: "fire_whiskey"
+    expect:
+      recipe: "fire_whiskey"
+      quality: 10
+      defects: []
+      distillRuns: 3
+      alcohol: 28
+      ageTime: 18
+      wood: "SPRUCE"
+
+  # the shortest cook that still matches
+  - name: "fire_whiskey / cook-shortest"
+    recipe: "fire_whiskey"
+    cook: 7
+    expect:
+      recipe: "fire_whiskey"
+      quality: 8
+      worstDefect: "CookTimeMismatch{7/12}"
+
+  # one minute under that, so it no longer matches
+  - name: "fire_whiskey / cook-too-short"
+    recipe: "fire_whiskey"
+    cook: 6
+    expect:
+      notRecipe: "fire_whiskey"
+
+  # the longest cook that still matches
+  - name: "fire_whiskey / cook-longest"
+    recipe: "fire_whiskey"
+    cook: 17
+    expect:
+      recipe: "fire_whiskey"
+      quality: 8
+      worstDefect: "CookTimeMismatch{17/12}"
+
+  # one minute over that, so it no longer matches
+  - name: "fire_whiskey / cook-too-long"
+    recipe: "fire_whiskey"
+    cook: 18
+    expect:
+      notRecipe: "fire_whiskey"
+
+  # one item short of the first ingredient
+  - name: "fire_whiskey / count-one-under"
+    recipe: "fire_whiskey"
+    ingredients: [wheat/9, blaze_powder/2]
+    expect:
+      recipe: "fire_whiskey"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "fire_whiskey / count-one-over"
+    recipe: "fire_whiskey"
+    ingredients: [wheat/11, blaze_powder/2]
+    expect:
+      recipe: "fire_whiskey"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "fire_whiskey / count-limit"
+    recipe: "fire_whiskey"
+    ingredients: [wheat/14, blaze_powder/2]
+    expect:
+      recipe: "fire_whiskey"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "fire_whiskey / count-beyond-limit"
+    recipe: "fire_whiskey"
+    ingredients: [wheat/15, blaze_powder/2]
+    expect:
+      notRecipe: "fire_whiskey"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "fire_whiskey / ingredient-missing"
+    recipe: "fire_whiskey"
+    ingredients: [blaze_powder/2]
+    expect:
+      notRecipe: "fire_whiskey"
+
+  # never distilled, though the recipe wants it
+  - name: "fire_whiskey / distill-none"
+    recipe: "fire_whiskey"
+    distill: 0
+    expect:
+      notRecipe: "fire_whiskey"
+
+  # one run short, which costs alcohol but not quality
+  - name: "fire_whiskey / distill-fewer"
+    recipe: "fire_whiskey"
+    distill: 2
+    expect:
+      recipe: "fire_whiskey"
+      quality: 10
+      distillRuns: 2
+      alcohol: 23
+
+  # one run too many, which adds alcohol but not quality
+  - name: "fire_whiskey / distill-more"
+    recipe: "fire_whiskey"
+    distill: 4
+    expect:
+      recipe: "fire_whiskey"
+      quality: 10
+      distillRuns: 4
+      alcohol: 32
+
+  # pulled from the barrel half a tolerance early
+  - name: "fire_whiskey / age-under"
+    recipe: "fire_whiskey"
+    age:
+      - { wood: SPRUCE, years: 16.5714 }
+    expect:
+      recipe: "fire_whiskey"
+      quality: 9
+      ageTime: 16.5714
+
+  # left in the barrel half a tolerance too long
+  - name: "fire_whiskey / age-over"
+    recipe: "fire_whiskey"
+    age:
+      - { wood: SPRUCE, years: 19.4286 }
+    expect:
+      recipe: "fire_whiskey"
+      quality: 9
+      ageTime: 19.4286
+
+  # left in so long the age factor bottoms out
+  - name: "fire_whiskey / age-beyond"
+    recipe: "fire_whiskey"
+    age:
+      - { wood: SPRUCE, years: 21.8571 }
+    expect:
+      recipe: "fire_whiskey"
+      quality: 7
+      ageTime: 21.8571
+
+  # never barrelled, though the recipe wants it
+  - name: "fire_whiskey / age-none"
+    recipe: "fire_whiskey"
+    age: []
+    expect:
+      ageTime: 0
+      recipe: "fire_whiskey"
+      quality: 5
+
+  # aged in the wood next to the one it wants
+  - name: "fire_whiskey / wood-neighbour"
+    recipe: "fire_whiskey"
+    age:
+      - { wood: JUNGLE, years: 18 }
+    expect:
+      recipe: "fire_whiskey"
+      quality: 8
+      wood: "JUNGLE"
+
+  # aged in the wood furthest from the one it wants
+  - name: "fire_whiskey / wood-worst"
+    recipe: "fire_whiskey"
+    age:
+      - { wood: PALE_OAK, years: 18 }
+    expect:
+      recipe: "fire_whiskey"
+      quality: 7
+      wood: "PALE_OAK"
+
+
+  # tequila   difficulty 5   cook 15m   distill 2   age 12y Birch   alcohol 20
+  # brewed exactly as the recipe asks
+  - name: "tequila / perfect"
+    recipe: "tequila"
+    expect:
+      recipe: "tequila"
+      quality: 10
+      defects: []
+      distillRuns: 2
+      alcohol: 20
+      ageTime: 12
+      wood: "BIRCH"
+
+  # the shortest cook that still matches
+  - name: "tequila / cook-shortest"
+    recipe: "tequila"
+    cook: 6
+    expect:
+      recipe: "tequila"
+      quality: 8
+      worstDefect: "CookTimeMismatch{6/15}"
+
+  # one minute under that, so it no longer matches
+  - name: "tequila / cook-too-short"
+    recipe: "tequila"
+    cook: 5
+    expect:
+      notRecipe: "tequila"
+
+  # the longest cook that still matches
+  - name: "tequila / cook-longest"
+    recipe: "tequila"
+    cook: 24
+    expect:
+      recipe: "tequila"
+      quality: 8
+      worstDefect: "CookTimeMismatch{24/15}"
+
+  # one minute over that, so it no longer matches
+  - name: "tequila / cook-too-long"
+    recipe: "tequila"
+    cook: 25
+    expect:
+      notRecipe: "tequila"
+
+  # one item short of the first ingredient
+  - name: "tequila / count-one-under"
+    recipe: "tequila"
+    ingredients: [cactus/7]
+    expect:
+      recipe: "tequila"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "tequila / count-one-over"
+    recipe: "tequila"
+    ingredients: [cactus/9]
+    expect:
+      recipe: "tequila"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "tequila / count-limit"
+    recipe: "tequila"
+    ingredients: [cactus/13]
+    expect:
+      recipe: "tequila"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "tequila / count-beyond-limit"
+    recipe: "tequila"
+    ingredients: [cactus/14]
+    expect:
+      notRecipe: "tequila"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "tequila / ingredient-missing"
+    recipe: "tequila"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "tequila"
+
+  # never distilled, though the recipe wants it
+  - name: "tequila / distill-none"
+    recipe: "tequila"
+    distill: 0
+    expect:
+      notRecipe: "tequila"
+
+  # one run short, which costs alcohol but not quality
+  - name: "tequila / distill-fewer"
+    recipe: "tequila"
+    distill: 1
+    expect:
+      recipe: "tequila"
+      quality: 10
+      distillRuns: 1
+      alcohol: 15
+
+  # one run too many, which adds alcohol but not quality
+  - name: "tequila / distill-more"
+    recipe: "tequila"
+    distill: 3
+    expect:
+      recipe: "tequila"
+      quality: 10
+      distillRuns: 3
+      alcohol: 25
+
+  # pulled from the barrel half a tolerance early
+  - name: "tequila / age-under"
+    recipe: "tequila"
+    age:
+      - { wood: BIRCH, years: 10 }
+    expect:
+      recipe: "tequila"
+      quality: 9
+      ageTime: 10
+
+  # left in the barrel half a tolerance too long
+  - name: "tequila / age-over"
+    recipe: "tequila"
+    age:
+      - { wood: BIRCH, years: 14 }
+    expect:
+      recipe: "tequila"
+      quality: 9
+      ageTime: 14
+
+  # left in so long the age factor bottoms out
+  - name: "tequila / age-beyond"
+    recipe: "tequila"
+    age:
+      - { wood: BIRCH, years: 17 }
+    expect:
+      recipe: "tequila"
+      quality: 7
+      ageTime: 17
+
+  # never barrelled, though the recipe wants it
+  - name: "tequila / age-none"
+    recipe: "tequila"
+    age: []
+    expect:
+      ageTime: 0
+      recipe: "tequila"
+      quality: 6
+
+  # aged in the wood next to the one it wants
+  - name: "tequila / wood-neighbour"
+    recipe: "tequila"
+    age:
+      - { wood: OAK, years: 12 }
+    expect:
+      recipe: "tequila"
+      quality: 9
+      wood: "OAK"
+
+  # aged in the wood furthest from the one it wants
+  - name: "tequila / wood-worst"
+    recipe: "tequila"
+    age:
+      - { wood: PALE_OAK, years: 12 }
+    expect:
+      recipe: "tequila"
+      quality: 7
+      wood: "PALE_OAK"
+
+
+  # vodka   difficulty 4   cook 15m   distill 3   alcohol 20
+  # brewed exactly as the recipe asks
+  - name: "vodka / perfect"
+    recipe: "vodka"
+    expect:
+      recipe: "vodka"
+      quality: 10
+      defects: []
+      distillRuns: 3
+      alcohol: 20
+      ageTime: 0
+
+  # the shortest cook that still matches
+  - name: "vodka / cook-shortest"
+    recipe: "vodka"
+    cook: 4
+    expect:
+      recipe: "vodka"
+      quality: 5
+      worstDefect: "CookTimeMismatch{4/15}"
+
+  # one minute under that, so it no longer matches
+  - name: "vodka / cook-too-short"
+    recipe: "vodka"
+    cook: 3
+    expect:
+      notRecipe: "vodka"
+
+  # the longest cook that still matches
+  - name: "vodka / cook-longest"
+    recipe: "vodka"
+    cook: 26
+    expect:
+      recipe: "vodka"
+      quality: 5
+      worstDefect: "CookTimeMismatch{26/15}"
+
+  # one minute over that, so it no longer matches
+  - name: "vodka / cook-too-long"
+    recipe: "vodka"
+    cook: 27
+    expect:
+      notRecipe: "vodka"
+
+  # one item short of the first ingredient
+  - name: "vodka / count-one-under"
+    recipe: "vodka"
+    ingredients: [potato/9]
+    expect:
+      recipe: "vodka"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "vodka / count-one-over"
+    recipe: "vodka"
+    ingredients: [potato/11]
+    expect:
+      recipe: "vodka"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "vodka / count-limit"
+    recipe: "vodka"
+    ingredients: [potato/17]
+    expect:
+      recipe: "vodka"
+      quality: 5
+
+  # one item past that, so it no longer matches
+  - name: "vodka / count-beyond-limit"
+    recipe: "vodka"
+    ingredients: [potato/18]
+    expect:
+      notRecipe: "vodka"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "vodka / ingredient-missing"
+    recipe: "vodka"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "vodka"
+
+  # never distilled, though the recipe wants it
+  - name: "vodka / distill-none"
+    recipe: "vodka"
+    distill: 0
+    expect:
+      notRecipe: "vodka"
+
+  # one run short, which costs alcohol but not quality
+  - name: "vodka / distill-fewer"
+    recipe: "vodka"
+    distill: 2
+    expect:
+      recipe: "vodka"
+      quality: 10
+      distillRuns: 2
+      alcohol: 16
+
+  # one run too many, which adds alcohol but not quality
+  - name: "vodka / distill-more"
+    recipe: "vodka"
+    distill: 4
+    expect:
+      recipe: "vodka"
+      quality: 10
+      distillRuns: 4
+      alcohol: 23
+
+  # barrelled though the recipe never asked for it
+  - name: "vodka / age-unwanted"
+    recipe: "vodka"
+    age:
+      - { wood: OAK, years: 5 }
+    expect:
+      notRecipe: "vodka"
+      ageTime: 5
+
+
+  # eggnog   difficulty 4   cook 2m   age 3y any wood   alcohol 10
+  # brewed exactly as the recipe asks
+  - name: "eggnog / perfect"
+    recipe: "eggnog"
+    expect:
+      recipe: "eggnog"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: 10
+      ageTime: 3
+
+  # the longest cook that still matches
+  - name: "eggnog / cook-longest"
+    recipe: "eggnog"
+    cook: 8
+    expect:
+      recipe: "eggnog"
+      quality: 8
+      worstDefect: "CookTimeMismatch{8/2}"
+
+  # one minute over that, so it no longer matches
+  - name: "eggnog / cook-too-long"
+    recipe: "eggnog"
+    cook: 9
+    expect:
+      notRecipe: "eggnog"
+
+  # one item short of the first ingredient
+  - name: "eggnog / count-one-under"
+    recipe: "eggnog"
+    ingredients: [egg/4, sugar/2, milk_bucket/1]
+    expect:
+      recipe: "eggnog"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "eggnog / count-one-over"
+    recipe: "eggnog"
+    ingredients: [egg/6, sugar/2, milk_bucket/1]
+    expect:
+      recipe: "eggnog"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "eggnog / count-limit"
+    recipe: "eggnog"
+    ingredients: [egg/11, sugar/2, milk_bucket/1]
+    expect:
+      recipe: "eggnog"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "eggnog / count-beyond-limit"
+    recipe: "eggnog"
+    ingredients: [egg/12, sugar/2, milk_bucket/1]
+    expect:
+      notRecipe: "eggnog"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "eggnog / ingredient-missing"
+    recipe: "eggnog"
+    ingredients: [sugar/2, milk_bucket/1]
+    expect:
+      notRecipe: "eggnog"
+
+  # distilled though the recipe never asked for it
+  - name: "eggnog / distill-unwanted"
+    recipe: "eggnog"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # left in the barrel half a tolerance too long
+  - name: "eggnog / age-over"
+    recipe: "eggnog"
+    age:
+      - { wood: OAK, years: 5.5000 }
+    expect:
+      recipe: "eggnog"
+      quality: 9
+      ageTime: 5.5000
+
+  # left in so long the age factor bottoms out
+  - name: "eggnog / age-beyond"
+    recipe: "eggnog"
+    age:
+      - { wood: OAK, years: 9 }
+    expect:
+      recipe: "eggnog"
+      quality: 7
+      ageTime: 9
+
+  # never barrelled, though the recipe wants it
+  - name: "eggnog / age-none"
+    recipe: "eggnog"
+    age: []
+    expect:
+      ageTime: 0
+      notRecipe: "eggnog"
+
+
+  # cidre   difficulty 4   cook 7m   age 3y any wood   alcohol 7
+  # brewed exactly as the recipe asks
+  - name: "cidre / perfect"
+    recipe: "cidre"
+    expect:
+      recipe: "cidre"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: 7
+      ageTime: 3
+
+  # the shortest cook that still matches
+  - name: "cidre / cook-shortest"
+    recipe: "cidre"
+    cook: 1
+    expect:
+      recipe: "cidre"
+      quality: 8
+      worstDefect: "CookTimeMismatch{1/7}"
+
+  # the longest cook that still matches
+  - name: "cidre / cook-longest"
+    recipe: "cidre"
+    cook: 13
+    expect:
+      recipe: "cidre"
+      quality: 8
+      worstDefect: "CookTimeMismatch{13/7}"
+
+  # one minute over that, so it no longer matches
+  - name: "cidre / cook-too-long"
+    recipe: "cidre"
+    cook: 14
+    expect:
+      notRecipe: "cidre"
+
+  # one item short of the first ingredient
+  - name: "cidre / count-one-under"
+    recipe: "cidre"
+    ingredients: [apple/13]
+    expect:
+      recipe: "cidre"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "cidre / count-one-over"
+    recipe: "cidre"
+    ingredients: [apple/15]
+    expect:
+      recipe: "cidre"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "cidre / count-limit"
+    recipe: "cidre"
+    ingredients: [apple/24]
+    expect:
+      recipe: "cidre"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "cidre / count-beyond-limit"
+    recipe: "cidre"
+    ingredients: [apple/25]
+    expect:
+      notRecipe: "cidre"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "cidre / ingredient-missing"
+    recipe: "cidre"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "cidre"
+
+  # distilled though the recipe never asked for it
+  - name: "cidre / distill-unwanted"
+    recipe: "cidre"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # left in the barrel half a tolerance too long
+  - name: "cidre / age-over"
+    recipe: "cidre"
+    age:
+      - { wood: OAK, years: 5.5000 }
+    expect:
+      recipe: "cidre"
+      quality: 9
+      ageTime: 5.5000
+
+  # left in so long the age factor bottoms out
+  - name: "cidre / age-beyond"
+    recipe: "cidre"
+    age:
+      - { wood: OAK, years: 9 }
+    expect:
+      recipe: "cidre"
+      quality: 7
+      ageTime: 9
+
+  # never barrelled, though the recipe wants it
+  - name: "cidre / age-none"
+    recipe: "cidre"
+    age: []
+    expect:
+      ageTime: 0
+      notRecipe: "cidre"
+
+
+  # absinthe   difficulty 8   cook 3m   distill 6   alcohol 42
+  # brewed exactly as the recipe asks
+  - name: "absinthe / perfect"
+    recipe: "absinthe"
+    expect:
+      recipe: "absinthe"
+      quality: 10
+      defects: []
+      distillRuns: 6
+      alcohol: 42
+      ageTime: 0
+
+  # the shortest cook that still matches
+  - name: "absinthe / cook-shortest"
+    recipe: "absinthe"
+    cook: 1
+    expect:
+      recipe: "absinthe"
+      quality: 5
+      worstDefect: "CookTimeMismatch{1/3}"
+
+  # the longest cook that still matches
+  - name: "absinthe / cook-longest"
+    recipe: "absinthe"
+    cook: 5
+    expect:
+      recipe: "absinthe"
+      quality: 5
+      worstDefect: "CookTimeMismatch{5/3}"
+
+  # one minute over that, so it no longer matches
+  - name: "absinthe / cook-too-long"
+    recipe: "absinthe"
+    cook: 6
+    expect:
+      notRecipe: "absinthe"
+
+  # one item short of the first ingredient
+  - name: "absinthe / count-one-under"
+    recipe: "absinthe"
+    ingredients: [short_grass/14]
+    expect:
+      recipe: "absinthe"
+      quality: 9
+
+  # one item too many of the first ingredient
+  - name: "absinthe / count-one-over"
+    recipe: "absinthe"
+    ingredients: [short_grass/16]
+    expect:
+      recipe: "absinthe"
+      quality: 9
+
+  # the most of the first ingredient that still matches
+  - name: "absinthe / count-limit"
+    recipe: "absinthe"
+    ingredients: [short_grass/20]
+    expect:
+      recipe: "absinthe"
+      quality: 5
+
+  # one item past that, so it no longer matches
+  - name: "absinthe / count-beyond-limit"
+    recipe: "absinthe"
+    ingredients: [short_grass/21]
+    expect:
+      notRecipe: "absinthe"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "absinthe / ingredient-missing"
+    recipe: "absinthe"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "absinthe"
+
+  # never distilled, though the recipe wants it
+  - name: "absinthe / distill-none"
+    recipe: "absinthe"
+    distill: 0
+    expect:
+      notRecipe: "absinthe"
+
+  # one run short, which costs alcohol but not quality
+  - name: "absinthe / distill-fewer"
+    recipe: "absinthe"
+    distill: 5
+    expect:
+      recipe: "absinthe"
+      quality: 10
+      distillRuns: 5
+      alcohol: 38
+
+  # one run too many, which adds alcohol but not quality
+  - name: "absinthe / distill-more"
+    recipe: "absinthe"
+    distill: 7
+    expect:
+      recipe: "absinthe"
+      quality: 10
+      distillRuns: 7
+      alcohol: 45
+
+  # barrelled though the recipe never asked for it
+  - name: "absinthe / age-unwanted"
+    recipe: "absinthe"
+    age:
+      - { wood: OAK, years: 5 }
+    expect:
+      notRecipe: "absinthe"
+      ageTime: 5
+
+
+  # coffee   difficulty 3   cook 2m   alcohol -6
+  # brewed exactly as the recipe asks
+  - name: "coffee / perfect"
+    recipe: "coffee"
+    expect:
+      recipe: "coffee"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: -6
+      ageTime: 0
+
+  # the longest cook that still matches
+  - name: "coffee / cook-longest"
+    recipe: "coffee"
+    cook: 8
+    expect:
+      recipe: "coffee"
+      quality: 5
+      worstDefect: "CookTimeMismatch{8/2}"
+
+  # one minute over that, so it no longer matches
+  - name: "coffee / cook-too-long"
+    recipe: "coffee"
+    cook: 9
+    expect:
+      notRecipe: "coffee"
+
+  # one item short of the first ingredient
+  - name: "coffee / count-one-under"
+    recipe: "coffee"
+    ingredients: [cocoa_beans/11, milk_bucket/2]
+    expect:
+      recipe: "coffee"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "coffee / count-one-over"
+    recipe: "coffee"
+    ingredients: [cocoa_beans/13, milk_bucket/2]
+    expect:
+      recipe: "coffee"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "coffee / count-limit"
+    recipe: "coffee"
+    ingredients: [cocoa_beans/22, milk_bucket/2]
+    expect:
+      recipe: "coffee"
+      quality: 5
+
+  # one item past that, so it no longer matches
+  - name: "coffee / count-beyond-limit"
+    recipe: "coffee"
+    ingredients: [cocoa_beans/23, milk_bucket/2]
+    expect:
+      notRecipe: "coffee"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "coffee / ingredient-missing"
+    recipe: "coffee"
+    ingredients: [milk_bucket/2]
+    expect:
+      notRecipe: "coffee"
+
+  # distilled though the recipe never asked for it
+  - name: "coffee / distill-unwanted"
+    recipe: "coffee"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # barrelled though the recipe never asked for it
+  - name: "coffee / age-unwanted"
+    recipe: "coffee"
+    age:
+      - { wood: OAK, years: 5 }
+    expect:
+      notRecipe: "coffee"
+      ageTime: 5
+
+
+  # g_vodka   difficulty 6   cook 18m   distill 3   alcohol 20
+  # brewed exactly as the recipe asks
+  - name: "g_vodka / perfect"
+    recipe: "g_vodka"
+    expect:
+      recipe: "g_vodka"
+      quality: 10
+      defects: []
+      distillRuns: 3
+      alcohol: 20
+      ageTime: 0
+
+  # one minute under that, so it no longer matches
+  - name: "g_vodka / cook-too-short"
+    recipe: "g_vodka"
+    cook: 8
+    expect:
+      notRecipe: "g_vodka"
+
+  # the longest cook that still matches
+  - name: "g_vodka / cook-longest"
+    recipe: "g_vodka"
+    cook: 27
+    expect:
+      recipe: "g_vodka"
+      quality: 5
+      worstDefect: "CookTimeMismatch{27/18}"
+
+  # one minute over that, so it no longer matches
+  - name: "g_vodka / cook-too-long"
+    recipe: "g_vodka"
+    cook: 28
+    expect:
+      notRecipe: "g_vodka"
+
+  # one item short of the first ingredient
+  - name: "g_vodka / count-one-under"
+    recipe: "g_vodka"
+    ingredients: [potato/9, gold_nugget/2]
+    expect:
+      recipe: "g_vodka"
+      quality: 9
+
+  # one item too many of the first ingredient
+  - name: "g_vodka / count-one-over"
+    recipe: "g_vodka"
+    ingredients: [potato/11, gold_nugget/2]
+    expect:
+      recipe: "g_vodka"
+      quality: 9
+
+  # the most of the first ingredient that still matches
+  - name: "g_vodka / count-limit"
+    recipe: "g_vodka"
+    ingredients: [potato/15, gold_nugget/2]
+    expect:
+      recipe: "g_vodka"
+      quality: 5
+
+  # one item past that, so it no longer matches
+  - name: "g_vodka / count-beyond-limit"
+    recipe: "g_vodka"
+    ingredients: [potato/16, gold_nugget/2]
+    expect:
+      notRecipe: "g_vodka"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "g_vodka / ingredient-missing"
+    recipe: "g_vodka"
+    ingredients: [gold_nugget/2]
+    expect:
+      notRecipe: "g_vodka"
+
+  # never distilled, though the recipe wants it
+  - name: "g_vodka / distill-none"
+    recipe: "g_vodka"
+    distill: 0
+    expect:
+      notRecipe: "g_vodka"
+
+  # one run short, which costs alcohol but not quality
+  - name: "g_vodka / distill-fewer"
+    recipe: "g_vodka"
+    distill: 2
+    expect:
+      recipe: "g_vodka"
+      quality: 10
+      distillRuns: 2
+      alcohol: 16
+
+  # one run too many, which adds alcohol but not quality
+  - name: "g_vodka / distill-more"
+    recipe: "g_vodka"
+    distill: 4
+    expect:
+      recipe: "g_vodka"
+      quality: 10
+      distillRuns: 4
+      alcohol: 23
+
+  # barrelled though the recipe never asked for it
+  - name: "g_vodka / age-unwanted"
+    recipe: "g_vodka"
+    age:
+      - { wood: OAK, years: 5 }
+    expect:
+      notRecipe: "g_vodka"
+      ageTime: 5
+
+
+  # shroom_vodka   difficulty 7   cook 18m   distill 5   alcohol 18
+  # brewed exactly as the recipe asks
+  - name: "shroom_vodka / perfect"
+    recipe: "shroom_vodka"
+    expect:
+      recipe: "shroom_vodka"
+      quality: 10
+      defects: []
+      distillRuns: 5
+      alcohol: 18
+      ageTime: 0
+
+  # the shortest cook that still matches
+  - name: "shroom_vodka / cook-shortest"
+    recipe: "shroom_vodka"
+    cook: 11
+    expect:
+      recipe: "shroom_vodka"
+      quality: 5
+      worstDefect: "CookTimeMismatch{11/18}"
+
+  # one minute under that, so it no longer matches
+  - name: "shroom_vodka / cook-too-short"
+    recipe: "shroom_vodka"
+    cook: 10
+    expect:
+      notRecipe: "shroom_vodka"
+
+  # the longest cook that still matches
+  - name: "shroom_vodka / cook-longest"
+    recipe: "shroom_vodka"
+    cook: 25
+    expect:
+      recipe: "shroom_vodka"
+      quality: 5
+      worstDefect: "CookTimeMismatch{25/18}"
+
+  # one minute over that, so it no longer matches
+  - name: "shroom_vodka / cook-too-long"
+    recipe: "shroom_vodka"
+    cook: 26
+    expect:
+      notRecipe: "shroom_vodka"
+
+  # one item short of the first ingredient
+  - name: "shroom_vodka / count-one-under"
+    recipe: "shroom_vodka"
+    ingredients: [potato/9, red_mushroom/3, brown_mushroom/3]
+    expect:
+      recipe: "shroom_vodka"
+      quality: 9
+
+  # one item too many of the first ingredient
+  - name: "shroom_vodka / count-one-over"
+    recipe: "shroom_vodka"
+    ingredients: [potato/11, red_mushroom/3, brown_mushroom/3]
+    expect:
+      recipe: "shroom_vodka"
+      quality: 9
+
+  # the most of the first ingredient that still matches
+  - name: "shroom_vodka / count-limit"
+    recipe: "shroom_vodka"
+    ingredients: [potato/14, red_mushroom/3, brown_mushroom/3]
+    expect:
+      recipe: "shroom_vodka"
+      quality: 5
+
+  # one item past that, so it no longer matches
+  - name: "shroom_vodka / count-beyond-limit"
+    recipe: "shroom_vodka"
+    ingredients: [potato/15, red_mushroom/3, brown_mushroom/3]
+    expect:
+      notRecipe: "shroom_vodka"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "shroom_vodka / ingredient-missing"
+    recipe: "shroom_vodka"
+    ingredients: [red_mushroom/3, brown_mushroom/3]
+    expect:
+      notRecipe: "shroom_vodka"
+
+  # never distilled, though the recipe wants it
+  - name: "shroom_vodka / distill-none"
+    recipe: "shroom_vodka"
+    distill: 0
+    expect:
+      notRecipe: "shroom_vodka"
+
+  # one run short, which costs alcohol but not quality
+  - name: "shroom_vodka / distill-fewer"
+    recipe: "shroom_vodka"
+    distill: 4
+    expect:
+      recipe: "shroom_vodka"
+      quality: 10
+      distillRuns: 4
+      alcohol: 16
+
+  # one run too many, which adds alcohol but not quality
+  - name: "shroom_vodka / distill-more"
+    recipe: "shroom_vodka"
+    distill: 6
+    expect:
+      recipe: "shroom_vodka"
+      quality: 10
+      distillRuns: 6
+      alcohol: 19
+
+  # barrelled though the recipe never asked for it
+  - name: "shroom_vodka / age-unwanted"
+    recipe: "shroom_vodka"
+    age:
+      - { wood: OAK, years: 5 }
+    expect:
+      notRecipe: "shroom_vodka"
+      ageTime: 5
+
+
+  # beer   difficulty 1   cook 8m   age 3y any wood   alcohol 6
+  # brewed exactly as the recipe asks
+  - name: "beer / perfect"
+    recipe: "beer"
+    expect:
+      recipe: "beer"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: 6
+      ageTime: 3
+
+  # the longest cook that still matches
+  - name: "beer / cook-longest"
+    recipe: "beer"
+    cook: 16
+    expect:
+      recipe: "beer"
+      quality: 8
+      worstDefect: "CookTimeMismatch{16/8}"
+
+  # one minute over that, so it no longer matches
+  - name: "beer / cook-too-long"
+    recipe: "beer"
+    cook: 17
+    expect:
+      notRecipe: "beer"
+
+  # one item short of the first ingredient
+  - name: "beer / count-one-under"
+    recipe: "beer"
+    ingredients: [wheat/5]
+    expect:
+      recipe: "beer"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "beer / count-one-over"
+    recipe: "beer"
+    ingredients: [wheat/7]
+    expect:
+      recipe: "beer"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "beer / count-limit"
+    recipe: "beer"
+    ingredients: [wheat/14]
+    expect:
+      recipe: "beer"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "beer / count-beyond-limit"
+    recipe: "beer"
+    ingredients: [wheat/15]
+    expect:
+      notRecipe: "beer"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "beer / ingredient-missing"
+    recipe: "beer"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "beer"
+
+  # distilled though the recipe never asked for it
+  - name: "beer / distill-unwanted"
+    recipe: "beer"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # left in the barrel half a tolerance too long
+  - name: "beer / age-over"
+    recipe: "beer"
+    age:
+      - { wood: OAK, years: 13 }
+    expect:
+      recipe: "beer"
+      quality: 9
+      ageTime: 13
+
+  # left in so long the age factor bottoms out
+  - name: "beer / age-beyond"
+    recipe: "beer"
+    age:
+      - { wood: OAK, years: 24 }
+    expect:
+      recipe: "beer"
+      quality: 7
+      ageTime: 24
+
+  # never barrelled, though the recipe wants it
+  - name: "beer / age-none"
+    recipe: "beer"
+    age: []
+    expect:
+      ageTime: 0
+      notRecipe: "beer"
+
+
+  # wine   difficulty 4   cook 5m   age 20y any wood   alcohol 8
+  # brewed exactly as the recipe asks
+  - name: "wine / perfect"
+    recipe: "wine"
+    expect:
+      recipe: "wine"
+      quality: 10
+      defects: []
+      distillRuns: 0
+      alcohol: 8
+      ageTime: 20
+
+  # the longest cook that still matches
+  - name: "wine / cook-longest"
+    recipe: "wine"
+    cook: 11
+    expect:
+      recipe: "wine"
+      quality: 8
+      worstDefect: "CookTimeMismatch{11/5}"
+
+  # one minute over that, so it no longer matches
+  - name: "wine / cook-too-long"
+    recipe: "wine"
+    cook: 12
+    expect:
+      notRecipe: "wine"
+
+  # one item short of the first ingredient
+  - name: "wine / count-one-under"
+    recipe: "wine"
+    ingredients: [sweet_berries/4]
+    expect:
+      recipe: "wine"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "wine / count-one-over"
+    recipe: "wine"
+    ingredients: [sweet_berries/6]
+    expect:
+      recipe: "wine"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "wine / count-limit"
+    recipe: "wine"
+    ingredients: [sweet_berries/11]
+    expect:
+      recipe: "wine"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "wine / count-beyond-limit"
+    recipe: "wine"
+    ingredients: [sweet_berries/12]
+    expect:
+      notRecipe: "wine"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "wine / ingredient-missing"
+    recipe: "wine"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "wine"
+
+  # distilled though the recipe never asked for it
+  - name: "wine / distill-unwanted"
+    recipe: "wine"
+    distill: 1
+    age: []
+    expect:
+      quality: "0..9"
+
+  # pulled from the barrel half a tolerance early
+  - name: "wine / age-under"
+    recipe: "wine"
+    age:
+      - { wood: OAK, years: 17.5000 }
+    expect:
+      recipe: "wine"
+      quality: 9
+      ageTime: 17.5000
+
+  # left in the barrel half a tolerance too long
+  - name: "wine / age-over"
+    recipe: "wine"
+    age:
+      - { wood: OAK, years: 22.5000 }
+    expect:
+      recipe: "wine"
+      quality: 9
+      ageTime: 22.5000
+
+  # left in so long the age factor bottoms out
+  - name: "wine / age-beyond"
+    recipe: "wine"
+    age:
+      - { wood: OAK, years: 26 }
+    expect:
+      recipe: "wine"
+      quality: 7
+      ageTime: 26
+
+  # never barrelled, though the recipe wants it
+  - name: "wine / age-none"
+    recipe: "wine"
+    age: []
+    expect:
+      ageTime: 0
+      notRecipe: "wine"
+
+
+  # whiskey   difficulty 7   cook 10m   distill 2   age 18y Spruce   alcohol 26
+  # brewed exactly as the recipe asks
+  - name: "whiskey / perfect"
+    recipe: "whiskey"
+    expect:
+      recipe: "whiskey"
+      quality: 10
+      defects: []
+      distillRuns: 2
+      alcohol: 26
+      ageTime: 18
+      wood: "SPRUCE"
+
+  # the shortest cook that still matches
+  - name: "whiskey / cook-shortest"
+    recipe: "whiskey"
+    cook: 6
+    expect:
+      recipe: "whiskey"
+      quality: 8
+      worstDefect: "CookTimeMismatch{6/10}"
+
+  # one minute under that, so it no longer matches
+  - name: "whiskey / cook-too-short"
+    recipe: "whiskey"
+    cook: 5
+    expect:
+      notRecipe: "whiskey"
+
+  # the longest cook that still matches
+  - name: "whiskey / cook-longest"
+    recipe: "whiskey"
+    cook: 14
+    expect:
+      recipe: "whiskey"
+      quality: 8
+      worstDefect: "CookTimeMismatch{14/10}"
+
+  # one minute over that, so it no longer matches
+  - name: "whiskey / cook-too-long"
+    recipe: "whiskey"
+    cook: 15
+    expect:
+      notRecipe: "whiskey"
+
+  # one item short of the first ingredient
+  - name: "whiskey / count-one-under"
+    recipe: "whiskey"
+    ingredients: [wheat/9]
+    expect:
+      recipe: "whiskey"
+      quality: 10
+
+  # one item too many of the first ingredient
+  - name: "whiskey / count-one-over"
+    recipe: "whiskey"
+    ingredients: [wheat/11]
+    expect:
+      recipe: "whiskey"
+      quality: 10
+
+  # the most of the first ingredient that still matches
+  - name: "whiskey / count-limit"
+    recipe: "whiskey"
+    ingredients: [wheat/14]
+    expect:
+      recipe: "whiskey"
+      quality: 8
+
+  # one item past that, so it no longer matches
+  - name: "whiskey / count-beyond-limit"
+    recipe: "whiskey"
+    ingredients: [wheat/15]
+    expect:
+      notRecipe: "whiskey"
+
+  # an ingredient the recipe needs is not in the pot
+  - name: "whiskey / ingredient-missing"
+    recipe: "whiskey"
+    ingredients: [DIRT/1]
+    expect:
+      notRecipe: "whiskey"
+
+  # never distilled, though the recipe wants it
+  - name: "whiskey / distill-none"
+    recipe: "whiskey"
+    distill: 0
+    expect:
+      notRecipe: "whiskey"
+
+  # one run short, which costs alcohol but not quality
+  - name: "whiskey / distill-fewer"
+    recipe: "whiskey"
+    distill: 1
+    expect:
+      recipe: "whiskey"
+      quality: 10
+      distillRuns: 1
+      alcohol: 19
+
+  # one run too many, which adds alcohol but not quality
+  - name: "whiskey / distill-more"
+    recipe: "whiskey"
+    distill: 3
+    expect:
+      recipe: "whiskey"
+      quality: 10
+      distillRuns: 3
+      alcohol: 32
+
+  # pulled from the barrel half a tolerance early
+  - name: "whiskey / age-under"
+    recipe: "whiskey"
+    age:
+      - { wood: SPRUCE, years: 16.5714 }
+    expect:
+      recipe: "whiskey"
+      quality: 9
+      ageTime: 16.5714
+
+  # left in the barrel half a tolerance too long
+  - name: "whiskey / age-over"
+    recipe: "whiskey"
+    age:
+      - { wood: SPRUCE, years: 19.4286 }
+    expect:
+      recipe: "whiskey"
+      quality: 9
+      ageTime: 19.4286
+
+  # left in so long the age factor bottoms out
+  - name: "whiskey / age-beyond"
+    recipe: "whiskey"
+    age:
+      - { wood: SPRUCE, years: 21.8571 }
+    expect:
+      recipe: "whiskey"
+      quality: 7
+      ageTime: 21.8571
+
+  # never barrelled, though the recipe wants it
+  - name: "whiskey / age-none"
+    recipe: "whiskey"
+    age: []
+    expect:
+      ageTime: 0
+      recipe: "whiskey"
+      quality: 5
+
+  # aged in the wood next to the one it wants
+  - name: "whiskey / wood-neighbour"
+    recipe: "whiskey"
+    age:
+      - { wood: JUNGLE, years: 18 }
+    expect:
+      recipe: "whiskey"
+      quality: 8
+      wood: "JUNGLE"
+
+  # aged in the wood furthest from the one it wants
+  - name: "whiskey / wood-worst"
+    recipe: "whiskey"
+    age:
+      - { wood: PALE_OAK, years: 18 }
+    expect:
+      recipe: "whiskey"
+      quality: 7
+      wood: "PALE_OAK"
+
+
+  # fer_spid_eye   ferment   fermented_spider_eye ×1
+  # exactly the ingredients it lists
+  - name: "fer_spid_eye / ferment-exact"
+    ingredients: [fermented_spider_eye/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "fer_spid_eye"
+
+  # twice as much of everything
+  - name: "fer_spid_eye / ferment-abundant"
+    ingredients: [fermented_spider_eye/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "fer_spid_eye"
+
+  # a single one of everything
+  - name: "fer_spid_eye / ferment-sparse"
+    ingredients: [fermented_spider_eye/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "fer_spid_eye"
+
+  # one of its ingredients is not in the pot
+  - name: "fer_spid_eye / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "fer_spid_eye"
+
+
+  # gin_base   ferment   blue-flowers ×1, wheat ×1, apple ×1
+  # exactly the ingredients it lists
+  - name: "gin_base / ferment-exact"
+    ingredients: [blue-flowers/1, wheat/1, apple/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "gin_base"
+
+  # twice as much of everything
+  - name: "gin_base / ferment-abundant"
+    ingredients: [blue-flowers/2, wheat/2, apple/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "gin_base"
+
+  # a single one of everything
+  - name: "gin_base / ferment-sparse"
+    ingredients: [blue-flowers/1, wheat/1, apple/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "gin_base"
+
+  # one of its ingredients is not in the pot
+  - name: "gin_base / ferment-missing"
+    ingredients: [wheat/1, apple/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "gin_base"
+
+
+  # bmushroom   ferment   brown_mushroom ×1
+  # exactly the ingredients it lists
+  - name: "bmushroom / ferment-exact"
+    ingredients: [brown_mushroom/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "bmushroom"
+
+  # twice as much of everything
+  - name: "bmushroom / ferment-abundant"
+    ingredients: [brown_mushroom/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "bmushroom"
+
+  # a single one of everything
+  - name: "bmushroom / ferment-sparse"
+    ingredients: [brown_mushroom/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "bmushroom"
+
+  # one of its ingredients is not in the pot
+  - name: "bmushroom / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "bmushroom"
+
+
+  # pumpkin_seeds   ferment   pumpkin_seeds ×1
+  # exactly the ingredients it lists
+  - name: "pumpkin_seeds / ferment-exact"
+    ingredients: [pumpkin_seeds/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "pumpkin_seeds"
+
+  # twice as much of everything
+  - name: "pumpkin_seeds / ferment-abundant"
+    ingredients: [pumpkin_seeds/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "pumpkin_seeds"
+
+  # a single one of everything
+  - name: "pumpkin_seeds / ferment-sparse"
+    ingredients: [pumpkin_seeds/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "pumpkin_seeds"
+
+  # one of its ingredients is not in the pot
+  - name: "pumpkin_seeds / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "pumpkin_seeds"
+
+
+  # egg   ferment   egg ×1
+  # exactly the ingredients it lists
+  - name: "egg / ferment-exact"
+    ingredients: [egg/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "egg"
+
+  # twice as much of everything
+  - name: "egg / ferment-abundant"
+    ingredients: [egg/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "egg"
+
+  # a single one of everything
+  - name: "egg / ferment-sparse"
+    ingredients: [egg/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "egg"
+
+  # one of its ingredients is not in the pot
+  - name: "egg / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "egg"
+
+
+  # oak_sapling   ferment   oak_sapling ×1
+  # exactly the ingredients it lists
+  - name: "oak_sapling / ferment-exact"
+    ingredients: [oak_sapling/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "oak_sapling"
+
+  # twice as much of everything
+  - name: "oak_sapling / ferment-abundant"
+    ingredients: [oak_sapling/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "oak_sapling"
+
+  # a single one of everything
+  - name: "oak_sapling / ferment-sparse"
+    ingredients: [oak_sapling/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "oak_sapling"
+
+  # one of its ingredients is not in the pot
+  - name: "oak_sapling / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "oak_sapling"
+
+
+  # berries   ferment   sweet_berries ×1
+  # exactly the ingredients it lists
+  - name: "berries / ferment-exact"
+    ingredients: [sweet_berries/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "berries"
+
+  # twice as much of everything
+  - name: "berries / ferment-abundant"
+    ingredients: [sweet_berries/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "berries"
+
+  # a single one of everything
+  - name: "berries / ferment-sparse"
+    ingredients: [sweet_berries/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "berries"
+
+  # one of its ingredients is not in the pot
+  - name: "berries / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "berries"
+
+
+  # sugarcane   ferment   sugar_cane ×1
+  # exactly the ingredients it lists
+  - name: "sugarcane / ferment-exact"
+    ingredients: [sugar_cane/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "sugarcane"
+
+  # twice as much of everything
+  - name: "sugarcane / ferment-abundant"
+    ingredients: [sugar_cane/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "sugarcane"
+
+  # a single one of everything
+  - name: "sugarcane / ferment-sparse"
+    ingredients: [sugar_cane/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "sugarcane"
+
+  # one of its ingredients is not in the pot
+  - name: "sugarcane / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "sugarcane"
+
+
+  # Gold_Nugget   ferment   gold_nugget ×1
+  # exactly the ingredients it lists
+  - name: "Gold_Nugget / ferment-exact"
+    ingredients: [gold_nugget/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "Gold_Nugget"
+
+  # twice as much of everything
+  - name: "Gold_Nugget / ferment-abundant"
+    ingredients: [gold_nugget/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "Gold_Nugget"
+
+  # a single one of everything
+  - name: "Gold_Nugget / ferment-sparse"
+    ingredients: [gold_nugget/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "Gold_Nugget"
+
+  # one of its ingredients is not in the pot
+  - name: "Gold_Nugget / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "Gold_Nugget"
+
+
+  # apple   ferment   apple ×1
+  # exactly the ingredients it lists
+  - name: "apple / ferment-exact"
+    ingredients: [apple/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "apple"
+
+  # twice as much of everything
+  - name: "apple / ferment-abundant"
+    ingredients: [apple/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "apple"
+
+  # a single one of everything
+  - name: "apple / ferment-sparse"
+    ingredients: [apple/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "apple"
+
+  # one of its ingredients is not in the pot
+  - name: "apple / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "apple"
+
+
+  # potato   ferment   potato ×1
+  # exactly the ingredients it lists
+  - name: "potato / ferment-exact"
+    ingredients: [potato/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "potato"
+
+  # twice as much of everything
+  - name: "potato / ferment-abundant"
+    ingredients: [potato/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "potato"
+
+  # a single one of everything
+  - name: "potato / ferment-sparse"
+    ingredients: [potato/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "potato"
+
+  # one of its ingredients is not in the pot
+  - name: "potato / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "potato"
+
+
+  # grass   ferment   short_grass ×1
+  # exactly the ingredients it lists
+  - name: "grass / ferment-exact"
+    ingredients: [short_grass/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "grass"
+
+  # twice as much of everything
+  - name: "grass / ferment-abundant"
+    ingredients: [short_grass/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "grass"
+
+  # a single one of everything
+  - name: "grass / ferment-sparse"
+    ingredients: [short_grass/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "grass"
+
+  # one of its ingredients is not in the pot
+  - name: "grass / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "grass"
+
+
+  # rot_flesh   ferment   rotten_flesh ×1
+  # exactly the ingredients it lists
+  - name: "rot_flesh / ferment-exact"
+    ingredients: [rotten_flesh/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "rot_flesh"
+
+  # twice as much of everything
+  - name: "rot_flesh / ferment-abundant"
+    ingredients: [rotten_flesh/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "rot_flesh"
+
+  # a single one of everything
+  - name: "rot_flesh / ferment-sparse"
+    ingredients: [rotten_flesh/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "rot_flesh"
+
+  # one of its ingredients is not in the pot
+  - name: "rot_flesh / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "rot_flesh"
+
+
+  # bone_meal   ferment   bone_meal ×1
+  # exactly the ingredients it lists
+  - name: "bone_meal / ferment-exact"
+    ingredients: [bone_meal/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "bone_meal"
+
+  # twice as much of everything
+  - name: "bone_meal / ferment-abundant"
+    ingredients: [bone_meal/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "bone_meal"
+
+  # a single one of everything
+  - name: "bone_meal / ferment-sparse"
+    ingredients: [bone_meal/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "bone_meal"
+
+  # one of its ingredients is not in the pot
+  - name: "bone_meal / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "bone_meal"
+
+
+  # cactus   ferment   cactus ×1
+  # exactly the ingredients it lists
+  - name: "cactus / ferment-exact"
+    ingredients: [cactus/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "cactus"
+
+  # twice as much of everything
+  - name: "cactus / ferment-abundant"
+    ingredients: [cactus/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "cactus"
+
+  # a single one of everything
+  - name: "cactus / ferment-sparse"
+    ingredients: [cactus/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "cactus"
+
+  # one of its ingredients is not in the pot
+  - name: "cactus / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "cactus"
+
+
+  # wheat   ferment   wheat ×1
+  # exactly the ingredients it lists
+  - name: "wheat / ferment-exact"
+    ingredients: [wheat/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "wheat"
+
+  # twice as much of everything
+  - name: "wheat / ferment-abundant"
+    ingredients: [wheat/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "wheat"
+
+  # a single one of everything
+  - name: "wheat / ferment-sparse"
+    ingredients: [wheat/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "wheat"
+
+  # one of its ingredients is not in the pot
+  - name: "wheat / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "wheat"
+
+
+  # bl_flow   ferment   blue-flowers ×1
+  # exactly the ingredients it lists
+  - name: "bl_flow / ferment-exact"
+    ingredients: [blue-flowers/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "bl_flow"
+
+  # twice as much of everything
+  - name: "bl_flow / ferment-abundant"
+    ingredients: [blue-flowers/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "bl_flow"
+
+  # a single one of everything
+  - name: "bl_flow / ferment-sparse"
+    ingredients: [blue-flowers/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "bl_flow"
+
+  # one of its ingredients is not in the pot
+  - name: "bl_flow / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "bl_flow"
+
+
+  # ghast_tear   ferment   ghast_tear ×1
+  # exactly the ingredients it lists
+  - name: "ghast_tear / ferment-exact"
+    ingredients: [ghast_tear/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "ghast_tear"
+
+  # twice as much of everything
+  - name: "ghast_tear / ferment-abundant"
+    ingredients: [ghast_tear/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "ghast_tear"
+
+  # a single one of everything
+  - name: "ghast_tear / ferment-sparse"
+    ingredients: [ghast_tear/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "ghast_tear"
+
+  # one of its ingredients is not in the pot
+  - name: "ghast_tear / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "ghast_tear"
+
+
+  # melon   ferment   melon_slice ×1
+  # exactly the ingredients it lists
+  - name: "melon / ferment-exact"
+    ingredients: [melon_slice/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "melon"
+
+  # twice as much of everything
+  - name: "melon / ferment-abundant"
+    ingredients: [melon_slice/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "melon"
+
+  # a single one of everything
+  - name: "melon / ferment-sparse"
+    ingredients: [melon_slice/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "melon"
+
+  # one of its ingredients is not in the pot
+  - name: "melon / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "melon"
+
+
+  # vine   ferment   vine ×1
+  # exactly the ingredients it lists
+  - name: "vine / ferment-exact"
+    ingredients: [vine/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "vine"
+
+  # twice as much of everything
+  - name: "vine / ferment-abundant"
+    ingredients: [vine/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "vine"
+
+  # a single one of everything
+  - name: "vine / ferment-sparse"
+    ingredients: [vine/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "vine"
+
+  # one of its ingredients is not in the pot
+  - name: "vine / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "vine"
+
+
+  # wheat_seeds   ferment   wheat_seeds ×1
+  # exactly the ingredients it lists
+  - name: "wheat_seeds / ferment-exact"
+    ingredients: [wheat_seeds/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "wheat_seeds"
+
+  # twice as much of everything
+  - name: "wheat_seeds / ferment-abundant"
+    ingredients: [wheat_seeds/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "wheat_seeds"
+
+  # a single one of everything
+  - name: "wheat_seeds / ferment-sparse"
+    ingredients: [wheat_seeds/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "wheat_seeds"
+
+  # one of its ingredients is not in the pot
+  - name: "wheat_seeds / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "wheat_seeds"
+
+
+  # cookie   ferment   cookie ×1
+  # one of its ingredients is not in the pot
+  - name: "cookie / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "cookie"
+
+
+  # milk   ferment   milk_bucket ×1
+  # exactly the ingredients it lists
+  - name: "milk / ferment-exact"
+    ingredients: [milk_bucket/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "milk"
+
+  # twice as much of everything
+  - name: "milk / ferment-abundant"
+    ingredients: [milk_bucket/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "milk"
+
+  # a single one of everything
+  - name: "milk / ferment-sparse"
+    ingredients: [milk_bucket/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "milk"
+
+  # one of its ingredients is not in the pot
+  - name: "milk / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "milk"
+
+
+  # juniper   ferment   blue-flowers ×1, wheat ×1
+  # exactly the ingredients it lists
+  - name: "juniper / ferment-exact"
+    ingredients: [blue-flowers/1, wheat/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "juniper"
+
+  # twice as much of everything
+  - name: "juniper / ferment-abundant"
+    ingredients: [blue-flowers/2, wheat/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "juniper"
+
+  # a single one of everything
+  - name: "juniper / ferment-sparse"
+    ingredients: [blue-flowers/1, wheat/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "juniper"
+
+  # one of its ingredients is not in the pot
+  - name: "juniper / ferment-missing"
+    ingredients: [wheat/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "juniper"
+
+
+  # cocoa   ferment   cocoa_beans ×1
+  # exactly the ingredients it lists
+  - name: "cocoa / ferment-exact"
+    ingredients: [cocoa_beans/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "cocoa"
+
+  # twice as much of everything
+  - name: "cocoa / ferment-abundant"
+    ingredients: [cocoa_beans/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "cocoa"
+
+  # a single one of everything
+  - name: "cocoa / ferment-sparse"
+    ingredients: [cocoa_beans/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "cocoa"
+
+  # one of its ingredients is not in the pot
+  - name: "cocoa / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "cocoa"
+
+
+  # ex   ferment   bedrock ×2, diamond ×1
+  # exactly the ingredients it lists
+  - name: "ex / ferment-exact"
+    ingredients: [bedrock/2, diamond/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "ex"
+
+  # twice as much of everything
+  - name: "ex / ferment-abundant"
+    ingredients: [bedrock/4, diamond/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "ex"
+
+  # a single one of everything
+  - name: "ex / ferment-sparse"
+    ingredients: [bedrock/1, diamond/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "ex"
+
+  # one of its ingredients is not in the pot
+  - name: "ex / ferment-missing"
+    ingredients: [diamond/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "ex"
+
+
+  # rmushroom   ferment   red_mushroom ×1
+  # exactly the ingredients it lists
+  - name: "rmushroom / ferment-exact"
+    ingredients: [red_mushroom/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "rmushroom"
+
+  # twice as much of everything
+  - name: "rmushroom / ferment-abundant"
+    ingredients: [red_mushroom/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "rmushroom"
+
+  # a single one of everything
+  - name: "rmushroom / ferment-sparse"
+    ingredients: [red_mushroom/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "rmushroom"
+
+  # one of its ingredients is not in the pot
+  - name: "rmushroom / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "rmushroom"
+
+
+  # glowstone_dust   ferment   glowstone_dust ×1
+  # exactly the ingredients it lists
+  - name: "glowstone_dust / ferment-exact"
+    ingredients: [glowstone_dust/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "glowstone_dust"
+
+  # twice as much of everything
+  - name: "glowstone_dust / ferment-abundant"
+    ingredients: [glowstone_dust/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "glowstone_dust"
+
+  # a single one of everything
+  - name: "glowstone_dust / ferment-sparse"
+    ingredients: [glowstone_dust/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "glowstone_dust"
+
+  # one of its ingredients is not in the pot
+  - name: "glowstone_dust / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "glowstone_dust"
+
+
+  # poi_potato   ferment   poisonous_potato ×1
+  # exactly the ingredients it lists
+  - name: "poi_potato / ferment-exact"
+    ingredients: [poisonous_potato/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "poi_potato"
+
+  # twice as much of everything
+  - name: "poi_potato / ferment-abundant"
+    ingredients: [poisonous_potato/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "poi_potato"
+
+  # a single one of everything
+  - name: "poi_potato / ferment-sparse"
+    ingredients: [poisonous_potato/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "poi_potato"
+
+  # one of its ingredients is not in the pot
+  - name: "poi_potato / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "poi_potato"
+
+
+  # applemead_base   ferment   sugar_cane ×3, apple ×1
+  # exactly the ingredients it lists
+  - name: "applemead_base / ferment-exact"
+    ingredients: [sugar_cane/3, apple/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "applemead_base"
+
+  # twice as much of everything
+  - name: "applemead_base / ferment-abundant"
+    ingredients: [sugar_cane/6, apple/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "applemead_base"
+
+  # a single one of everything
+  - name: "applemead_base / ferment-sparse"
+    ingredients: [sugar_cane/1, apple/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "applemead_base"
+
+  # one of its ingredients is not in the pot
+  - name: "applemead_base / ferment-missing"
+    ingredients: [apple/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "applemead_base"
+
+
+  # snowball   ferment   snowball ×1
+  # exactly the ingredients it lists
+  - name: "snowball / ferment-exact"
+    ingredients: [snowball/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "snowball"
+
+  # twice as much of everything
+  - name: "snowball / ferment-abundant"
+    ingredients: [snowball/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "snowball"
+
+  # a single one of everything
+  - name: "snowball / ferment-sparse"
+    ingredients: [snowball/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "snowball"
+
+  # one of its ingredients is not in the pot
+  - name: "snowball / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "snowball"
+
+
+  # sugar   ferment   sugar ×1
+  # exactly the ingredients it lists
+  - name: "sugar / ferment-exact"
+    ingredients: [sugar/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "sugar"
+
+  # twice as much of everything
+  - name: "sugar / ferment-abundant"
+    ingredients: [sugar/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "sugar"
+
+  # a single one of everything
+  - name: "sugar / ferment-sparse"
+    ingredients: [sugar/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "sugar"
+
+  # one of its ingredients is not in the pot
+  - name: "sugar / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "sugar"
+
+
+  # melon_seeds   ferment   melon_seeds ×1
+  # exactly the ingredients it lists
+  - name: "melon_seeds / ferment-exact"
+    ingredients: [melon_seeds/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "melon_seeds"
+
+  # twice as much of everything
+  - name: "melon_seeds / ferment-abundant"
+    ingredients: [melon_seeds/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "melon_seeds"
+
+  # a single one of everything
+  - name: "melon_seeds / ferment-sparse"
+    ingredients: [melon_seeds/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "melon_seeds"
+
+  # one of its ingredients is not in the pot
+  - name: "melon_seeds / ferment-missing"
+    ingredients: [DIRT/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "melon_seeds"
+
+
+  # poi_grass   ferment   short_grass ×1, poisonous_potato ×1
+  # exactly the ingredients it lists
+  - name: "poi_grass / ferment-exact"
+    ingredients: [short_grass/1, poisonous_potato/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "poi_grass"
+
+  # twice as much of everything
+  - name: "poi_grass / ferment-abundant"
+    ingredients: [short_grass/2, poisonous_potato/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "poi_grass"
+
+  # a single one of everything
+  - name: "poi_grass / ferment-sparse"
+    ingredients: [short_grass/1, poisonous_potato/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "poi_grass"
+
+  # one of its ingredients is not in the pot
+  - name: "poi_grass / ferment-missing"
+    ingredients: [poisonous_potato/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "poi_grass"
+
+
+  # eggnog_base   ferment   egg ×1, sugar ×1, milk_bucket ×1
+  # exactly the ingredients it lists
+  - name: "eggnog_base / ferment-exact"
+    ingredients: [egg/1, sugar/1, milk_bucket/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "eggnog_base"
+
+  # twice as much of everything
+  - name: "eggnog_base / ferment-abundant"
+    ingredients: [egg/2, sugar/2, milk_bucket/2]
+    cook: 1
+    expect:
+      cauldronRecipe: "eggnog_base"
+
+  # a single one of everything
+  - name: "eggnog_base / ferment-sparse"
+    ingredients: [egg/1, sugar/1, milk_bucket/1]
+    cook: 1
+    expect:
+      cauldronRecipe: "eggnog_base"
+
+  # one of its ingredients is not in the pot
+  - name: "eggnog_base / ferment-missing"
+    ingredients: [sugar/1, milk_bucket/1]
+    cook: 1
+    expect:
+      notCauldronRecipe: "eggnog_base"
+

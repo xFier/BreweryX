@@ -68,7 +68,15 @@ public final class BrewSimulator {
             return new SimulationResult(null, null, null, null, Outcome.CANCELLED);
         }
 
-        Brew brew = new Brew(ingredients);
+        // Read the brew back off the item rather than building a fresh one: cook() has already
+        // decided whether a cooking-only recipe claimed these ingredients, and only the brew it
+        // saved carries that. A `new Brew(ingredients)` would start blank, which the still and the
+        // barrel would paper over but a recipe that is only ever cooked never would — it would
+        // come out nameless however perfectly it was brewed.
+        Brew brew = Brew.get(item);
+        if (brew == null) {
+            brew = new Brew(ingredients);
+        }
         BCauldronRecipe cauldronRecipe = findCauldronRecipe(ingredients, simulation.cookedTime());
         Logging.debugLog(String.format("simulate: cooked for %d minutes: %s",
             simulation.cookedTime(), ChatColor.stripColor(brew.toString())));

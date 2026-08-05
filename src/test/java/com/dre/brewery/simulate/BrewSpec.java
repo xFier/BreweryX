@@ -50,13 +50,13 @@ import java.util.Set;
  * {@link #resolve} turns a case's recipe names, ingredients and woods into real objects once the
  * recipes are loaded.
  */
-public record BrewSpec(@Nullable Path configDir, List<Case> cases) {
+public record BrewSpec(@Nullable Path configDir, List<Case> cases, CheckSpec checks) {
 
     /** Keys a test case may carry. */
     private static final Set<String> CASE_KEYS =
         new LinkedHashSet<>(List.of("name", "recipe", "ingredients", "cook", "distill", "age", "expect"));
     /** Keys the file itself may carry. */
-    private static final Set<String> ROOT_KEYS = new LinkedHashSet<>(List.of("config", "tests"));
+    private static final Set<String> ROOT_KEYS = new LinkedHashSet<>(List.of("config", "tests", "checks"));
     /** Keys an `age` step may carry. */
     private static final Set<String> AGE_KEYS = new LinkedHashSet<>(List.of("wood", "years"));
 
@@ -157,37 +157,37 @@ public record BrewSpec(@Nullable Path configDir, List<Case> cases) {
             }
         }
 
-        Object testsValue = rootMap.get("tests");
-        if (testsValue == null) {
-            problems.add("no `tests:` list. It should look like:\n" + EXAMPLE);
-            throw new SpecException(header, problems);
-        }
-        if (!(testsValue instanceof List<?> testsList)) {
-            problems.add("`tests` should be a list of cases, but is " + describe(testsValue));
-            throw new SpecException(header, problems);
-        }
-        if (testsList.isEmpty()) {
-            problems.add("`tests` is empty, so there is nothing to run");
-        }
+        CheckSpec checks = CheckSpec.parse(rootMap.get("checks"), problems);
 
         List<Case> cases = new ArrayList<>();
-        for (int i = 0; i < testsList.size(); i++) {
-            Object element = testsList.get(i);
-            String label = "tests[" + i + "]";
-            if (!(element instanceof Map<?, ?> caseMap)) {
-                problems.add(label + " should be a case with `expect:`, but is " + describe(element));
-                continue;
+        Object testsValue = rootMap.get("tests");
+        if (testsValue != null && !(testsValue instanceof List<?>)) {
+            problems.add("`tests` should be a list of cases, but is " + describe(testsValue));
+        } else if (testsValue instanceof List<?> testsList) {
+            for (int i = 0; i < testsList.size(); i++) {
+                Object element = testsList.get(i);
+                String label = "tests[" + i + "]";
+                if (!(element instanceof Map<?, ?> caseMap)) {
+                    problems.add(label + " should be a case with `expect:`, but is " + describe(element));
+                    continue;
+                }
+                Case parsed = parseCase(caseMap, label, problems);
+                if (parsed != null) {
+                    cases.add(parsed);
+                }
             }
-            Case parsed = parseCase(caseMap, label, problems);
-            if (parsed != null) {
-                cases.add(parsed);
-            }
+        }
+
+        // A file needs to ask for something: hand-written cases, generated ones, or both.
+        if (cases.isEmpty() && checks.isEmpty() && problems.isEmpty()) {
+            problems.add("no `tests:` cases and no `checks:` section, so there is nothing to run. "
+                + "It should look like:\n" + EXAMPLE);
         }
 
         if (!problems.isEmpty()) {
             throw new SpecException(header, problems);
         }
-        return new BrewSpec(configDir, List.copyOf(cases));
+        return new BrewSpec(configDir, List.copyOf(cases), checks);
     }
 
     private static @Nullable Case parseCase(Map<?, ?> map, String label, List<String> problems) {
@@ -430,6 +430,9 @@ public record BrewSpec(@Nullable Path configDir, List<Case> cases) {
               recipe: wheatbeer
               expect:
                 quality: 10
+
+          checks:
+            all: standard
         """;
 
 }

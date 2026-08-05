@@ -53,8 +53,15 @@ public final class BrewExpectation {
 
     /** Every key an `expect:` block may carry, in the order they are documented. */
     public static final List<String> KEYS = List.of(
-        "recipe", "cauldronRecipe", "quality", "alcohol", "distillRuns",
+        "recipe", "notRecipe", "cauldronRecipe", "notCauldronRecipe", "quality", "alcohol", "distillRuns",
         "ageTime", "wood", "hasRecipe", "effects", "defects", "worstDefect", "outcome");
+
+    /**
+     * Keys that mean something even when nothing came out of the cauldron. Everything else needs a
+     * brew to compare against, so its absence is itself the mismatch.
+     */
+    private static final Set<String> KEYS_WITHOUT_A_BREW =
+        Set.of("outcome", "cauldronRecipe", "notCauldronRecipe", "notRecipe");
 
     private static final Pattern RANGE = Pattern.compile(
         "\\s*(-?\\d+(?:\\.\\d+)?)\\s*\\.\\.\\s*(-?\\d+(?:\\.\\d+)?)\\s*");
@@ -128,6 +135,13 @@ public final class BrewExpectation {
                             + "` should be a name, or empty to mean none matched, but is " + BrewSpec.describe(value));
                     }
                 }
+                case "notRecipe", "notCauldronRecipe" -> {
+                    // Unlike `recipe`, empty says nothing: "not none" is not an assertion.
+                    if (!(value instanceof String)) {
+                        problems.add(where + ": `expect." + key + "` should be the name of a recipe that must "
+                            + "not have matched, but is " + BrewSpec.describe(value));
+                    }
+                }
                 case "wood" -> validateEnum(value, where, key, woodNames(), problems);
                 case "outcome" -> validateEnum(value, where, key, outcomeNames(), problems);
                 case "worstDefect" -> {
@@ -182,7 +196,7 @@ public final class BrewExpectation {
             String key = entry.getKey();
             Object expected = entry.getValue();
 
-            if (brew == null && !key.equals("outcome") && !key.equals("cauldronRecipe")) {
+            if (brew == null && !KEYS_WITHOUT_A_BREW.contains(key)) {
                 mismatches.add(key + ": no brew was produced at all (outcome " + result.outcome() + ")");
                 continue;
             }
@@ -190,6 +204,11 @@ public final class BrewExpectation {
             switch (key) {
                 case "recipe" -> checkName(mismatches, key, expected, recipeNames(brew.getCurrentRecipe()));
                 case "cauldronRecipe" -> checkName(mismatches, key, expected, cauldronNames(result.cauldronRecipe()));
+                // Nothing at all came out is the strongest possible way of not being this recipe.
+                case "notRecipe" -> checkNotName(mismatches, key, expected,
+                    brew == null ? Set.of() : recipeNames(brew.getCurrentRecipe()));
+                case "notCauldronRecipe" -> checkNotName(mismatches, key, expected,
+                    cauldronNames(result.cauldronRecipe()));
                 case "quality" -> checkNumber(mismatches, key, expected, brew.getQuality());
                 case "alcohol" -> checkNumber(mismatches, key, expected, brew.getAlc());
                 case "ageTime" -> checkNumber(mismatches, key, expected, brew.getAgeTime());
@@ -250,6 +269,20 @@ public final class BrewExpectation {
             mismatches.add(key + ": expected " + wanted + ", got none");
         } else if (actual.stream().noneMatch(a -> a.equalsIgnoreCase(wanted))) {
             mismatches.add(key + ": expected " + wanted + ", got " + String.join(" / ", actual));
+        }
+    }
+
+    /**
+     * The inverse of {@link #checkName}: passes unless the named recipe is what matched.
+     * <p>
+     * This is what the boundary rules assert. Past its tolerance a recipe is rejected outright, but
+     * whether anything else steps in to claim those ingredients depends on the rest of the config,
+     * so "not this one" is the strongest thing that can be derived from the recipe alone.
+     */
+    private static void checkNotName(List<String> mismatches, String key, Object expected, Set<String> actual) {
+        String unwanted = String.valueOf(expected);
+        if (actual.stream().anyMatch(a -> a.equalsIgnoreCase(unwanted))) {
+            mismatches.add(key + ": expected anything but " + unwanted + ", but that is what matched");
         }
     }
 

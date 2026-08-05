@@ -48,6 +48,9 @@ val encoding: String = "UTF-8"
 // Declarative brew simulation tests, see the `brewTest` task.
 val brewSpecTemplateName: String = "brew-tests.default.yml"
 val brewSpecFileName: String = providers.gradleProperty("brewSpec").getOrElse("brew-tests.yml")
+// `-Pexpand` freezes the spec's `checks:` into plain cases. `-Pexpand=some-name.yml` picks the file.
+val brewExpandProperty: Provider<String> = providers.gradleProperty("expand")
+val brewExpandFileName: String = brewExpandProperty.getOrElse("").ifBlank { "brew-tests.generated.yml" }
 
 repositories {
     mavenCentral()
@@ -162,7 +165,8 @@ tasks {
 
     register<Test>("brewTest") {
         group = "verification"
-        description = "Runs the brew simulations declared in $brewSpecFileName against their expectations."
+        description = "Runs the brew simulations declared in $brewSpecFileName against their expectations. " +
+            "Pass -Pexpand to also freeze the spec's `checks:` into plain cases in $brewExpandFileName."
 
         val specFile = layout.projectDirectory.file(brewSpecFileName).asFile
         val template = layout.projectDirectory.file("src/test/resources/$brewSpecTemplateName").asFile
@@ -175,6 +179,12 @@ tasks {
         systemProperty("brewery.spec.file", specFile.absolutePath)
         providers.gradleProperty("breweryConfig").orNull?.let {
             systemProperty("brewery.config.dir", file(it).absolutePath)
+        }
+        if (brewExpandProperty.isPresent) {
+            systemProperty(
+                "brewery.expand.file",
+                layout.projectDirectory.file(brewExpandFileName).asFile.absolutePath
+            )
         }
 
         // The spec is hand-edited, so never let Gradle decide the answer is unchanged.
