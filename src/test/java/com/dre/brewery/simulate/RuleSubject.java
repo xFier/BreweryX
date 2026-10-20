@@ -27,7 +27,6 @@ import org.bukkit.ChatColor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Something a rule can be pointed at: a brewing recipe, or a cauldron ferment.
@@ -38,10 +37,13 @@ import java.util.Locale;
  */
 sealed interface RuleSubject {
 
-    /** How the maintainer names this subject in the spec, and how the report labels it. */
+    /** The id from the config file, which names the generated cases. */
     String id();
 
-    /** The subject's own numbers, as the first line of its report block. */
+    /** The name players see, for the report. */
+    String displayName();
+
+    /** What the subject asks for, in a line of plain words. */
     String headline();
 
     /** A brewing recipe from {@code recipes.yml}. */
@@ -55,42 +57,29 @@ sealed interface RuleSubject {
         }
 
         @Override
-        public String headline() {
-            List<String> parts = new ArrayList<>();
-            parts.add("difficulty " + recipe.getDifficulty());
-            parts.add("cook " + recipe.getCookingTime() + "m");
-            if (recipe.needsDistilling()) {
-                parts.add("distill " + recipe.getDistillruns());
-            }
-            if (recipe.needsToAge()) {
-                parts.add("age " + recipe.getAge() + "y "
-                    + (recipe.usesAnyWood() ? "any wood" : recipe.getWood().getFormattedName()));
-            }
-            parts.add("alcohol " + recipe.getAlcohol());
-            return String.join("   ", parts);
+        public String displayName() {
+            return orId(recipe.getRecipeName(), this);
         }
 
-        /**
-         * The tolerances the rules derive their inputs from, for the report's second line.
-         */
-        public String tolerances() {
+        @Override
+        public String headline() {
             List<String> parts = new ArrayList<>();
-            parts.add("cook ±" + RecipeMath.cookTolerance(recipe) + "m");
-            for (RecipeItem ingredient : recipe.getIngredients()) {
-                parts.add(ingredient.getDebugID() + " ±"
-                    + RecipeMath.countTolerance(recipe, ingredient.getAmount()));
+            parts.add(ingredients(recipe.getIngredients(), true));
+            parts.add("cook " + recipe.getCookingTime() + " min");
+            if (recipe.needsDistilling()) {
+                int runs = recipe.getDistillruns();
+                parts.add("distill " + (runs == 1 ? "once" : runs == 2 ? "twice" : runs + " times"));
             }
             if (recipe.needsToAge()) {
-                float age = RecipeMath.ageTolerance(recipe);
-                parts.add("age " + (Float.isInfinite(age)
-                    ? "unbounded"
-                    : String.format(Locale.ROOT, "±%.2fy", age)));
+                parts.add(BrewRules.years(recipe.getAge()) + " in "
+                    + (recipe.usesAnyWood() ? "any barrel" : recipe.getWood().getFormattedName() + " barrel"));
             }
-            return String.join("   ", parts);
+            parts.add("difficulty " + recipe.getDifficulty());
+            return String.join(", ", parts);
         }
     }
 
-    /** A cauldron ferment from {@code cauldron.yml}. */
+    /** A cauldron brew from {@code cauldron.yml}. */
     record Ferment(BCauldronRecipe recipe) implements RuleSubject {
 
         @Override
@@ -101,13 +90,29 @@ sealed interface RuleSubject {
         }
 
         @Override
-        public String headline() {
-            List<String> ingredients = new ArrayList<>();
-            for (RecipeItem ingredient : recipe.getIngredients()) {
-                ingredients.add(ingredient.getDebugID() + " ×" + ingredient.getAmount());
-            }
-            return "ferment   " + String.join(", ", ingredients);
+        public String displayName() {
+            return orId(recipe.getName(), this);
         }
+
+        @Override
+        public String headline() {
+            return "made from " + ingredients(recipe.getIngredients(), false);
+        }
+    }
+
+    private static String ingredients(List<RecipeItem> items, boolean withAmounts) {
+        List<String> parts = new ArrayList<>();
+        for (RecipeItem item : items) {
+            parts.add(withAmounts ? item.getAmount() + " " + BrewRules.item(item) : BrewRules.item(item));
+        }
+        return parts.isEmpty() ? "no ingredients" : String.join(" + ", parts);
+    }
+
+    private static String orId(String name, RuleSubject subject) {
+        // recipes.yml writes colours as &6, which only become strippable once translated to §6.
+        String stripped = name == null ? null
+            : ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&', name));
+        return stripped == null || stripped.isBlank() ? subject.id() : stripped;
     }
 
 }

@@ -20,6 +20,8 @@
 
 package com.dre.brewery.simulate;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
  * One way of brewing a recipe wrong — or exactly right — together with what that should produce.
  * <p>
@@ -31,17 +33,13 @@ package com.dre.brewery.simulate;
  */
 interface BrewRule {
 
-    /** The name the maintainer selects this rule by. */
+    /** A short id for the rule, used to name the case it produces. */
     String name();
-
-    /** One line for the documentation and the spec template. */
-    String summary();
 
     /**
      * Whether this rule has anything to say about this kind of subject at all.
      * <p>
-     * A preset names the whole vocabulary and lets each rule decide, so this keeps the ferment
-     * rules out of every recipe's report and vice versa. It is not the same as skipping: a skip is
+     * This keeps the ferment rules out of every recipe's report and vice versa. It is not the same as skipping: a skip is
      * a rule that could have applied to this subject and did not, which is worth saying.
      */
     boolean handles(RuleSubject subject);
@@ -59,12 +57,21 @@ interface BrewRule {
      */
     sealed interface Result {
 
-        /** A case, ready to go through the ordinary spec pipeline. */
-        record Applied(BrewSpec.Case testCase, String inputs) implements Result {
+        /**
+         * A case, ready to go through the ordinary spec pipeline.
+         *
+         * @param description what was done to the brew, in plain words for the report
+         */
+        record Applied(BrewSpec.Case testCase, String description) implements Result {
         }
 
-        /** Nothing to run, and why. */
-        record Skipped(String reason) implements Result {
+        /**
+         * Nothing to run.
+         *
+         * @param reason why, when that is worth telling a recipe author; null when it is obvious
+         *               from the recipe itself
+         */
+        record Skipped(@Nullable String reason) implements Result {
         }
     }
 

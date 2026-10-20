@@ -45,12 +45,11 @@ val langVersion: Int = 21
 val runTaskJavaVersion: Int = 25
 val encoding: String = "UTF-8"
 
-// Declarative brew simulation tests, see the `brewTest` task.
+// Brew simulation, see the `brewReport` and `brewTest` tasks. `-PbreweryConfig=<folder>` points
+// both at a server's plugins/BreweryX folder instead of BreweryX's built-in recipes.
 val brewSpecTemplateName: String = "brew-tests.default.yml"
-val brewSpecFileName: String = providers.gradleProperty("brewSpec").getOrElse("brew-tests.yml")
-// `-Pexpand` freezes the spec's `checks:` into plain cases. `-Pexpand=some-name.yml` picks the file.
-val brewExpandProperty: Provider<String> = providers.gradleProperty("expand")
-val brewExpandFileName: String = brewExpandProperty.getOrElse("").ifBlank { "brew-tests.generated.yml" }
+val brewSpecFileName: String = "brew-tests.yml"
+val brewReportFileName: String = "brew-report.txt"
 
 repositories {
     mavenCentral()
@@ -159,14 +158,38 @@ tasks {
     }
     test {
         useJUnitPlatform()
-        // brewTest owns these; `gradle build` should not need a spec file to exist.
+        // brewReport and brewTest own these; `gradle build` should not need a spec file to exist.
         exclude("**/BrewSpecTest.class")
+        exclude("**/BrewReportTest.class")
+    }
+
+    register<Test>("brewReport") {
+        group = "verification"
+        description = "Brews every recipe a couple of dozen ways and writes what came out to $brewReportFileName."
+
+        testClassesDirs = sourceSets.test.get().output.classesDirs
+        classpath = sourceSets.test.get().runtimeClasspath
+        useJUnitPlatform()
+        filter { includeTestsMatching("com.dre.brewery.simulate.BrewReportTest") }
+
+        systemProperty("brewery.report.file", layout.projectDirectory.file(brewReportFileName).asFile.absolutePath)
+        providers.gradleProperty("breweryConfig").orNull?.let {
+            systemProperty("brewery.config.dir", file(it).absolutePath)
+        }
+
+        // Recipes live outside the build, so never let Gradle decide the answer is unchanged.
+        outputs.upToDateWhen { false }
+
+        testLogging {
+            events(org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED)
+            showStandardStreams = true
+            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        }
     }
 
     register<Test>("brewTest") {
         group = "verification"
-        description = "Runs the brew simulations declared in $brewSpecFileName against their expectations. " +
-            "Pass -Pexpand to also freeze the spec's `checks:` into plain cases in $brewExpandFileName."
+        description = "Runs the brew tests written in $brewSpecFileName."
 
         val specFile = layout.projectDirectory.file(brewSpecFileName).asFile
         val template = layout.projectDirectory.file("src/test/resources/$brewSpecTemplateName").asFile
@@ -179,12 +202,6 @@ tasks {
         systemProperty("brewery.spec.file", specFile.absolutePath)
         providers.gradleProperty("breweryConfig").orNull?.let {
             systemProperty("brewery.config.dir", file(it).absolutePath)
-        }
-        if (brewExpandProperty.isPresent) {
-            systemProperty(
-                "brewery.expand.file",
-                layout.projectDirectory.file(brewExpandFileName).asFile.absolutePath
-            )
         }
 
         // The spec is hand-edited, so never let Gradle decide the answer is unchanged.
@@ -212,8 +229,7 @@ tasks {
                 val exampleCount = specFile.readLines().count { it.trimStart().startsWith("- name:") }
                 logger.lifecycle("")
                 logger.lifecycle("Created ${specFile.absolutePath}")
-                logger.lifecycle("  It has $exampleCount worked examples to edit or replace; running them now.")
-                logger.lifecycle("  Every key it accepts is documented in the comments at the top of the file.")
+                logger.lifecycle("  It has $exampleCount examples to edit or replace; running them now.")
                 logger.lifecycle("")
             }
         }

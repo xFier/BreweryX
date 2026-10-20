@@ -38,189 +38,106 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * The rule vocabulary, and the presets that group it.
+ * The fixed set of checks {@code brewReport} runs against every recipe and cauldron brew.
  * <p>
  * Every rule derives both its inputs and its expectations from the subject's own numbers, using
- * {@link RecipeMath} rather than the engine. What each one asserts is chosen to be exactly
+ * {@link RecipeMath} rather than the engine. What each one expects is chosen to be exactly
  * derivable and nothing more:
  * <ul>
- *     <li>Rules that stay inside a recipe's tolerances assert the recipe still matches and pin the
+ *     <li>Rules that stay inside a recipe's tolerances expect the recipe still matches and pin the
  *         quality, because the arithmetic gives one answer.</li>
- *     <li>Rules that step outside them assert only {@code notRecipe}. Past its tolerance the recipe
+ *     <li>Rules that step outside them expect only {@code notRecipe}. Past its tolerance the recipe
  *         is rejected outright, but whether some <em>other</em> recipe steps in to claim those
- *         ingredients depends on the rest of the config, so nothing stronger can be derived from
- *         one recipe alone. Add {@code hasRecipe: false} through a per-rule {@code expect:}
- *         override where you know it holds.</li>
+ *         ingredients depends on the rest of the config, which is what the report's overlaps are
+ *         for.</li>
  * </ul>
  * Age and wood boundaries are deliberately probed at half tolerance and well beyond it rather than
  * exactly on it: unlike the cook and count boundaries, which are whole numbers, the age tolerance
  * is {@code 20 / difficulty} and lands on a knife-edge where a float rounding either way flips the
  * factor between 0 and −1.
+ * <p>
+ * Each case carries a description in plain words, since that is what the report prints. Rules
+ * that cannot say anything about a subject skip themselves; a skip only carries a reason when the
+ * reason tells a recipe author something ("any barrel wood works"), not when it is obvious from
+ * the recipe ("it is never distilled").
  */
 final class BrewRules {
 
-    /** Items to stand in for a removed ingredient, or to pollute a pot with. */
+    /** Items to stand in for a removed ingredient. */
     private static final List<String> FILLERS =
         List.of("DIRT", "COBBLESTONE", "GRAVEL", "FLINT", "STRING", "BONE");
 
     /** Cook time for ferment cases: a ferment is only reported when no recipe claimed the cook. */
     private static final int FERMENT_COOK_TIME = 1;
 
-    private static final Map<String, BrewRule> RULES = new LinkedHashMap<>();
-    private static final Map<String, List<String>> PRESETS = new LinkedHashMap<>();
+    private static final List<BrewRule> RULES = new ArrayList<>();
 
     private BrewRules() {
     }
 
     static {
         // ------------------------------------------------------------ brews
-        register(recipeRule("perfect", "brewed exactly as the recipe asks", BrewRules::perfect));
+        register(recipeRule("perfect", BrewRules::perfect));
 
-        register(recipeRule("cook-shortest", "the shortest cook that still matches",
-            recipe -> cookCase(recipe, "cook-shortest",
-                recipe.getCookingTime() - RecipeMath.cookTolerance(recipe), true)));
-        register(recipeRule("cook-too-short", "one minute under that, so it no longer matches",
-            recipe -> cookCase(recipe, "cook-too-short",
-                recipe.getCookingTime() - RecipeMath.cookTolerance(recipe) - 1, false)));
-        register(recipeRule("cook-longest", "the longest cook that still matches",
-            recipe -> cookCase(recipe, "cook-longest",
-                recipe.getCookingTime() + RecipeMath.cookTolerance(recipe), true)));
-        register(recipeRule("cook-too-long", "one minute over that, so it no longer matches",
-            recipe -> cookCase(recipe, "cook-too-long",
-                recipe.getCookingTime() + RecipeMath.cookTolerance(recipe) + 1, false)));
+        register(recipeRule("cook-shortest", recipe -> cookCase(recipe, "cook-shortest",
+            recipe.getCookingTime() - RecipeMath.cookTolerance(recipe), true, "shortest that should work")));
+        register(recipeRule("cook-too-short", recipe -> cookCase(recipe, "cook-too-short",
+            recipe.getCookingTime() - RecipeMath.cookTolerance(recipe) - 1, false, "just too short")));
+        register(recipeRule("cook-longest", recipe -> cookCase(recipe, "cook-longest",
+            recipe.getCookingTime() + RecipeMath.cookTolerance(recipe), true, "longest that should work")));
+        register(recipeRule("cook-too-long", recipe -> cookCase(recipe, "cook-too-long",
+            recipe.getCookingTime() + RecipeMath.cookTolerance(recipe) + 1, false, "just too long")));
 
-        register(recipeRule("count-one-under", "one item short of the first ingredient",
-            recipe -> countOneOff(recipe, "count-one-under", -1)));
-        register(recipeRule("count-one-over", "one item too many of the first ingredient",
-            recipe -> countOneOff(recipe, "count-one-over", 1)));
-        register(recipeRule("count-limit", "the most of the first ingredient that still matches",
-            recipe -> countCase(recipe, "count-limit", firstCountTolerance(recipe), true)));
-        register(recipeRule("count-beyond-limit", "one item past that, so it no longer matches",
-            recipe -> countCase(recipe, "count-beyond-limit", firstCountTolerance(recipe) + 1, false)));
+        register(recipeRule("count-one-under", recipe -> countOneOff(recipe, "count-one-under", -1)));
+        register(recipeRule("count-one-over", recipe -> countOneOff(recipe, "count-one-over", 1)));
+        register(recipeRule("count-limit", recipe -> countCase(recipe, "count-limit",
+            firstCountTolerance(recipe), true, "most that should work")));
+        register(recipeRule("count-beyond-limit", recipe -> countCase(recipe, "count-beyond-limit",
+            firstCountTolerance(recipe) + 1, false, "just too many")));
 
-        register(recipeRule("ingredient-missing", "an ingredient the recipe needs is not in the pot",
-            BrewRules::ingredientMissing));
+        register(recipeRule("ingredient-missing", BrewRules::ingredientMissing));
 
-        register(recipeRule("distill-none", "never distilled, though the recipe wants it",
-            BrewRules::distillNone));
-        register(recipeRule("distill-fewer", "one run short, which costs alcohol but not quality",
-            recipe -> distillCountCase(recipe, "distill-fewer", -1)));
-        register(recipeRule("distill-more", "one run too many, which adds alcohol but not quality",
-            recipe -> distillCountCase(recipe, "distill-more", 1)));
-        register(recipeRule("distill-unwanted", "distilled though the recipe never asked for it",
-            BrewRules::distillUnwanted));
+        register(recipeRule("distill-none", BrewRules::distillNone));
+        register(recipeRule("distill-fewer", recipe -> distillCountCase(recipe, "distill-fewer", -1)));
+        register(recipeRule("distill-more", recipe -> distillCountCase(recipe, "distill-more", 1)));
+        register(recipeRule("distill-unwanted", BrewRules::distillUnwanted));
 
-        register(recipeRule("age-under", "pulled from the barrel half a tolerance early",
+        register(recipeRule("age-under",
             recipe -> ageCase(recipe, "age-under", -RecipeMath.ageTolerance(recipe) / 2)));
-        register(recipeRule("age-over", "left in the barrel half a tolerance too long",
+        register(recipeRule("age-over",
             recipe -> ageCase(recipe, "age-over", RecipeMath.ageTolerance(recipe) / 2)));
-        register(recipeRule("age-beyond", "left in so long the age factor bottoms out",
+        register(recipeRule("age-beyond",
             recipe -> ageCase(recipe, "age-beyond", RecipeMath.ageTolerance(recipe) + 1)));
-        register(recipeRule("age-none", "never barrelled, though the recipe wants it",
-            BrewRules::ageNone));
-        register(recipeRule("age-unwanted", "barrelled though the recipe never asked for it",
-            BrewRules::ageUnwanted));
+        register(recipeRule("age-none", BrewRules::ageNone));
+        register(recipeRule("age-unwanted", BrewRules::ageUnwanted));
 
-        register(recipeRule("wood-neighbour", "aged in the wood next to the one it wants",
-            recipe -> woodCase(recipe, "wood-neighbour", false)));
-        register(recipeRule("wood-worst", "aged in the wood furthest from the one it wants",
-            recipe -> woodCase(recipe, "wood-worst", true)));
+        register(recipeRule("wood-neighbour", recipe -> woodCase(recipe, "wood-neighbour", false)));
+        register(recipeRule("wood-worst", recipe -> woodCase(recipe, "wood-worst", true)));
 
         // ------------------------------------------------------------ ferments
-        register(fermentRule("ferment-exact", "exactly the ingredients it lists",
-            ferment -> fermentCase(ferment, "ferment-exact", amounts -> amounts, true)));
-        register(fermentRule("ferment-abundant", "twice as much of everything",
-            ferment -> fermentCase(ferment, "ferment-abundant", amount -> amount * 2, true)));
-        register(fermentRule("ferment-sparse", "a single one of everything",
-            ferment -> fermentCase(ferment, "ferment-sparse", amount -> 1, true)));
-        register(fermentRule("ferment-missing", "one of its ingredients is not in the pot",
-            BrewRules::fermentMissing));
-        register(fermentRule("ferment-extra", "its ingredients plus something it does not use",
-            BrewRules::fermentExtra));
-
-        // ------------------------------------------------------------ presets
-        // Rules that make no sense for a subject skip themselves, so a preset can list everything
-        // that could conceivably apply and let the subject sort it out.
-        PRESETS.put("invariants", List.of(
-            "perfect", "ingredient-missing",
-            "distill-none", "distill-unwanted", "age-none", "age-unwanted",
-            "ferment-exact", "ferment-missing"));
-        PRESETS.put("boundaries", List.of(
-            "cook-shortest", "cook-too-short", "cook-longest", "cook-too-long",
-            "count-limit", "count-beyond-limit",
-            "ferment-exact", "ferment-missing"));
-        PRESETS.put("standard", List.of(
-            "perfect",
-            "cook-shortest", "cook-too-short", "cook-longest", "cook-too-long",
-            "count-one-under", "count-one-over", "count-limit", "count-beyond-limit",
-            "ingredient-missing",
-            "distill-none", "distill-fewer", "distill-more", "distill-unwanted",
-            "age-under", "age-over", "age-beyond", "age-none", "age-unwanted",
-            "wood-neighbour", "wood-worst",
-            "ferment-exact", "ferment-abundant", "ferment-sparse", "ferment-missing"));
-        PRESETS.put("all", List.copyOf(RULES.keySet()));
+        register(fermentRule("ferment-exact", ferment -> fermentCase(ferment, "ferment-exact",
+            amount -> amount, "exactly its ingredients")));
+        register(fermentRule("ferment-abundant", ferment -> fermentCase(ferment, "ferment-abundant",
+            amount -> amount * 2, "double of every ingredient")));
+        register(fermentRule("ferment-sparse", ferment -> fermentCase(ferment, "ferment-sparse",
+            amount -> 1, "one of each ingredient")));
+        register(fermentRule("ferment-missing", BrewRules::fermentMissing));
     }
 
-    // ---------------------------------------------------------------- registry
-
-    /** Every rule name, in documentation order. */
-    static Set<String> ruleNames() {
-        return Collections.unmodifiableSet(RULES.keySet());
-    }
-
-    /** Every preset name. */
-    static Set<String> presetNames() {
-        return Collections.unmodifiableSet(PRESETS.keySet());
-    }
-
-    /** Everything a maintainer may write in a `rules:` list. */
-    static Set<String> selectableNames() {
-        Set<String> names = new LinkedHashSet<>(PRESETS.keySet());
-        names.addAll(RULES.keySet());
-        return names;
-    }
-
-    static boolean isPreset(String name) {
-        return PRESETS.containsKey(name);
-    }
-
-    static @Nullable BrewRule rule(String name) {
-        return RULES.get(name);
-    }
-
-    /**
-     * Expands a selection of rule and preset names into the rules to run, in vocabulary order and
-     * without duplicates.
-     *
-     * @param selected what the maintainer asked for
-     * @return the rules, ordered as they are documented
-     */
-    static List<BrewRule> expand(List<String> selected) {
-        Set<String> names = new LinkedHashSet<>();
-        for (String name : selected) {
-            List<String> preset = PRESETS.get(name);
-            if (preset != null) {
-                names.addAll(preset);
-            } else {
-                names.add(name);
-            }
-        }
-        // Vocabulary order, so a report reads the same however the rules were selected.
-        return RULES.entrySet().stream()
-            .filter(entry -> names.contains(entry.getKey()))
-            .map(Map.Entry::getValue)
-            .toList();
+    /** Every rule, in report order. */
+    static List<BrewRule> all() {
+        return Collections.unmodifiableList(RULES);
     }
 
     private static void register(BrewRule rule) {
-        RULES.put(rule.name(), rule);
+        RULES.add(rule);
     }
 
     // ---------------------------------------------------------------- brew rules
 
     private static Result perfect(BRecipe recipe) {
         int runs = recipe.needsDistilling() ? recipe.getDistillruns() : 0;
-        Draft draft = draft(recipe, "perfect").note("as the recipe asks");
+        Draft draft = draft(recipe, "perfect").describe("brewed exactly as written");
         draft.expect("recipe", id(recipe));
         draft.expect("quality", 10);
         draft.expect("defects", List.of());
@@ -233,13 +150,13 @@ final class BrewRules {
         return draft.done();
     }
 
-    private static Result cookCase(BRecipe recipe, String ruleName, int cookedTime, boolean shouldMatch) {
+    private static Result cookCase(BRecipe recipe, String ruleName, int cookedTime, boolean shouldMatch,
+                                   String boundary) {
         if (cookedTime < 1) {
-            return skip("its cook tolerance of ±" + RecipeMath.cookTolerance(recipe)
-                + "m already covers the whole " + recipe.getCookingTime() + "m cook, so there is no "
-                + "shorter cook to try");
+            return skip("Cooking it for as little as 1 minute still works.");
         }
-        Draft draft = draft(recipe, ruleName).cook(cookedTime);
+        Draft draft = draft(recipe, ruleName).cook(cookedTime)
+            .describe("cooked " + cookedTime + " min (" + boundary + ")");
         if (shouldMatch) {
             draft.expect("recipe", id(recipe));
             draft.expect("quality", quality(recipe, 10, cookQuality(recipe, cookedTime)));
@@ -256,34 +173,32 @@ final class BrewRules {
      * count-limit and skips instead.
      */
     private static Result countOneOff(BRecipe recipe, String ruleName, int offset) {
-        if (recipe.getIngredients().isEmpty()) {
-            return skip("it has no ingredients");
+        if (recipe.getIngredients().isEmpty() || firstCountTolerance(recipe) == 1) {
+            return quiet();
         }
-        if (firstCountTolerance(recipe) == 1) {
-            return skip("its count tolerance is ±1, so one item off is already count-limit");
-        }
-        return countCase(recipe, ruleName, offset, true);
+        return countCase(recipe, ruleName, offset, true, null);
     }
 
-    private static Result countCase(BRecipe recipe, String ruleName, int offset, boolean shouldMatch) {
+    private static Result countCase(BRecipe recipe, String ruleName, int offset, boolean shouldMatch,
+                                    @Nullable String boundary) {
         if (recipe.getIngredients().isEmpty()) {
-            return skip("it has no ingredients");
+            return quiet();
         }
         RecipeItem first = recipe.getIngredients().get(0);
         int wanted = first.getAmount();
         int amount = wanted + offset;
 
         if (amount < 1) {
-            return skip("the recipe only asks for " + wanted + " " + first.getDebugID()
-                + ", so there is no smaller amount that is still an ingredient");
+            return quiet();
         }
         List<String> ingredients = ingredientStrings(recipe, 0, amount);
         if (ingredients == null) {
             return skip(NOT_WRITABLE);
         }
 
+        String description = amount + " " + item(first) + " instead of " + wanted;
         Draft draft = draft(recipe, ruleName).ingredients(ingredients)
-            .note(first.getDebugID() + "=" + amount + " (recipe wants " + wanted + ")");
+            .describe(boundary == null ? description : description + " (" + boundary + ")");
         if (shouldMatch) {
             int ingredientQuality = RecipeMath.factorQuality(
                 RecipeMath.countDeduction(recipe, wanted, amount));
@@ -297,7 +212,7 @@ final class BrewRules {
 
     private static Result ingredientMissing(BRecipe recipe) {
         if (recipe.getIngredients().isEmpty()) {
-            return skip("it has no ingredients");
+            return quiet();
         }
         List<String> ingredients = ingredientStrings(recipe, -1, 0);
         if (ingredients == null) {
@@ -311,40 +226,42 @@ final class BrewRules {
             // put something the recipe does not use in the pot instead.
             String filler = filler(recipe.getIngredients());
             if (filler == null) {
-                return skip("every stand-in item is already one of its ingredients");
+                return quiet();
             }
             ingredients = List.of(filler + "/1");
         }
 
         return draft(recipe, "ingredient-missing")
             .ingredients(ingredients)
-            .note("no " + dropped.getDebugID())
+            .describe("left out the " + item(dropped))
             .expect("notRecipe", id(recipe))
             .done();
     }
 
     private static Result distillNone(BRecipe recipe) {
         if (!recipe.needsDistilling()) {
-            return skip("it is never distilled anyway");
+            return quiet();
         }
         return draft(recipe, "distill-none")
             .distill(0)
+            .describe("never distilled")
             .expect("notRecipe", id(recipe))
             .done();
     }
 
     private static Result distillCountCase(BRecipe recipe, String ruleName, int offset) {
         if (!recipe.needsDistilling()) {
-            return skip("it is never distilled");
+            return quiet();
         }
         int runs = recipe.getDistillruns() + offset;
         if (runs < 1) {
-            return skip("it only asks for one run, so one fewer is distill-none");
+            return quiet();
         }
         // Distill runs move alcohol, never quality: the still's contribution to quality is only
         // whether the brew went through it at all.
         return draft(recipe, ruleName)
             .distill(runs)
+            .describe("distilled " + times(runs) + " instead of " + times(recipe.getDistillruns()))
             .expect("recipe", id(recipe))
             .expect("quality", 10)
             .expect("distillRuns", runs)
@@ -353,7 +270,7 @@ final class BrewRules {
     }
 
     /**
-     * The still has two ways of dealing with a recipe that never asked for it, and this asserts the
+     * The still has two ways of dealing with a recipe that never asked for it, and this expects the
      * one thing true of both. Either nothing claims the brew, which zeroes the quality but leaves
      * {@code currentRecipe} pointing at whatever the cauldron named it — a ruined distill does not
      * clear the recipe, where a ruined ageing does — or some genuinely distillable recipe claims
@@ -366,33 +283,35 @@ final class BrewRules {
      */
     private static Result distillUnwanted(BRecipe recipe) {
         if (recipe.needsDistilling()) {
-            return skip("it is meant to be distilled");
+            return quiet();
         }
         // No barrel either, so the run ends at the still rather than giving the barrel a second
         // chance to name the brew.
         return draft(recipe, "distill-unwanted")
             .distill(1)
             .noAge()
+            .describe("distilled once, though the recipe never is")
             .expect("quality", "0..9")
             .done();
     }
 
     private static Result ageCase(BRecipe recipe, String ruleName, float offset) {
         if (!recipe.needsToAge()) {
-            return skip("it never sees a barrel");
+            return quiet();
         }
         if (recipe.getDifficulty() == 0) {
-            return skip("difficulty 0, so age costs it nothing however far off it is");
+            return skip(DIFFICULTY_ZERO);
         }
         float years = recipe.getAge() + offset;
         if (years <= 0.5f) {
-            return skip("that would leave it under half a day in the barrel, which does not age it at all");
+            return quiet();
         }
 
         BarrelWoodType wood = barrelWood(recipe);
         int ageQuality = RecipeMath.factorQuality(RecipeMath.ageDeduction(recipe, years));
         return draft(recipe, ruleName)
             .age(wood, years)
+            .describe("aged " + years(years) + " instead of " + years(recipe.getAge()))
             .expect("recipe", id(recipe))
             .expect("quality", RecipeMath.finalQuality(10, 10, 10, ageQuality))
             .expect("ageTime", years)
@@ -401,9 +320,11 @@ final class BrewRules {
 
     private static Result ageNone(BRecipe recipe) {
         if (!recipe.needsToAge()) {
-            return skip("it never sees a barrel anyway");
+            return quiet();
         }
-        Draft draft = draft(recipe, "age-none").noAge().expect("ageTime", 0);
+        Draft draft = draft(recipe, "age-none").noAge()
+            .describe("never put in a barrel")
+            .expect("ageTime", 0);
 
         if (!recipe.needsDistilling()) {
             // Cooking alone can only produce a cooking-only recipe, which this is not.
@@ -423,10 +344,11 @@ final class BrewRules {
 
     private static Result ageUnwanted(BRecipe recipe) {
         if (recipe.needsToAge()) {
-            return skip("it is meant to be barrelled");
+            return quiet();
         }
         return draft(recipe, "age-unwanted")
             .age(BarrelWoodType.OAK, 5)
+            .describe("aged 5 years in Oak, though the recipe never is")
             .expect("notRecipe", id(recipe))
             .expect("ageTime", 5)
             .done();
@@ -434,25 +356,24 @@ final class BrewRules {
 
     private static Result woodCase(BRecipe recipe, String ruleName, boolean furthest) {
         if (!recipe.needsToAge()) {
-            return skip("it never sees a barrel");
+            return quiet();
         }
         if (recipe.usesAnyWood()) {
-            return skip("it accepts any wood");
+            return skip("Any barrel wood works.");
         }
         if (recipe.getDifficulty() == 0) {
-            return skip("difficulty 0, so the wood costs it nothing");
+            return skip(DIFFICULTY_ZERO);
         }
 
         BarrelWoodType wood = furthest ? furthestWood(recipe) : neighbourWood(recipe);
         if (wood == null) {
-            return skip(furthest
-                ? "no wood is further from it than the ones it already accepts"
-                : "no wood sits exactly one index from the ones it accepts");
+            return quiet();
         }
 
         int woodQuality = RecipeMath.factorQuality(RecipeMath.woodDeduction(recipe, wood));
         return draft(recipe, ruleName)
             .age(wood, recipe.getAge())
+            .describe("aged in " + wood.getFormattedName() + " instead of " + recipe.getWood().getFormattedName())
             .expect("recipe", id(recipe))
             .expect("quality", RecipeMath.finalQuality(10, 10, woodQuality, 10))
             .expect("wood", wood.name())
@@ -462,21 +383,22 @@ final class BrewRules {
     // ---------------------------------------------------------------- ferment rules
 
     private static Result fermentCase(BCauldronRecipe ferment, String ruleName,
-                                      Function<Integer, Integer> amounts, boolean shouldMatch) {
+                                      Function<Integer, Integer> amounts, String description) {
         List<String> ingredients = fermentIngredients(ferment, amounts);
         if (ingredients == null) {
             return skip(NOT_WRITABLE);
         }
-        Draft draft = new Draft(fermentId(ferment), ruleName)
+        return new Draft(fermentId(ferment), ruleName)
             .ingredients(ingredients)
-            .cook(FERMENT_COOK_TIME);
-        return draft.expect(shouldMatch ? "cauldronRecipe" : "notCauldronRecipe", fermentId(ferment))
+            .cook(FERMENT_COOK_TIME)
+            .describe(description)
+            .expect("cauldronRecipe", fermentId(ferment))
             .done();
     }
 
     private static Result fermentMissing(BCauldronRecipe ferment) {
         if (ferment.getIngredients().isEmpty()) {
-            return skip("it has no ingredients");
+            return quiet();
         }
         List<String> ingredients = fermentIngredients(ferment, amount -> amount);
         if (ingredients == null) {
@@ -488,7 +410,7 @@ final class BrewRules {
         if (ingredients.isEmpty()) {
             String filler = filler(ferment.getIngredients());
             if (filler == null) {
-                return skip("every stand-in item is already one of its ingredients");
+                return quiet();
             }
             ingredients = List.of(filler + "/1");
         }
@@ -496,35 +418,18 @@ final class BrewRules {
         return new Draft(fermentId(ferment), "ferment-missing")
             .ingredients(ingredients)
             .cook(FERMENT_COOK_TIME)
-            .note("no " + dropped.getDebugID())
+            .describe("left out the " + item(dropped))
             .expect("notCauldronRecipe", fermentId(ferment))
-            .done();
-    }
-
-    private static Result fermentExtra(BCauldronRecipe ferment) {
-        List<String> ingredients = fermentIngredients(ferment, amount -> amount);
-        if (ingredients == null) {
-            return skip(NOT_WRITABLE);
-        }
-        String filler = filler(ferment.getIngredients());
-        if (filler == null) {
-            return skip("every stand-in item is already one of its ingredients");
-        }
-        ingredients = new ArrayList<>(ingredients);
-        ingredients.add(filler + "/1");
-
-        return new Draft(fermentId(ferment), "ferment-extra")
-            .ingredients(ingredients)
-            .cook(FERMENT_COOK_TIME)
-            .note("plus " + filler.toLowerCase(Locale.ROOT))
-            .expect("cauldronRecipe", fermentId(ferment))
             .done();
     }
 
     // ---------------------------------------------------------------- derivation helpers
 
     private static final String NOT_WRITABLE =
-        "its ingredients cannot be written back out as spec items, so they cannot be varied";
+        "Some ingredients come from other plugins, so the ingredient checks were left out.";
+
+    private static final String DIFFICULTY_ZERO =
+        "Difficulty 0, so barrel time and wood make no difference to quality.";
 
     /**
      * The brew's quality when only the ingredient and cook factors are off. Wood and age are
@@ -618,9 +523,9 @@ final class BrewRules {
     }
 
     /**
-     * Writes one ingredient out the way {@code recipes.yml} would, and checks the spec can read it
-     * back. Custom and plugin items generally cannot survive the round trip here, since the plugins
-     * that define them are not running.
+     * Writes one ingredient out the way {@code recipes.yml} would, and checks it can be read back.
+     * Custom and plugin items generally cannot survive the round trip here, since the plugins that
+     * define them are not running.
      */
     private static @Nullable String writeOut(RecipeItem ingredient, int amount) {
         String written;
@@ -653,6 +558,19 @@ final class BrewRules {
         return null;
     }
 
+    /** An ingredient as a reader would name it: {@code golden_carrot} becomes "golden carrot". */
+    static String item(RecipeItem ingredient) {
+        return ingredient.getDebugID().replace('_', ' ').toLowerCase(Locale.ROOT);
+    }
+
+    private static String times(int runs) {
+        return runs == 1 ? "once" : runs == 2 ? "twice" : runs + " times";
+    }
+
+    static String years(float years) {
+        return trim(years) + (years == 1 ? " year" : " years");
+    }
+
     private static String id(BRecipe recipe) {
         return new RuleSubject.Recipe(recipe).id();
     }
@@ -665,23 +583,28 @@ final class BrewRules {
         return new Result.Skipped(reason);
     }
 
+    /** A skip that is obvious from the recipe itself, so the report says nothing about it. */
+    private static Result quiet() {
+        return new Result.Skipped(null);
+    }
+
     private static Draft draft(BRecipe recipe, String ruleName) {
         return new Draft(id(recipe), ruleName).recipe(id(recipe));
     }
 
     // ---------------------------------------------------------------- plumbing
 
-    private static BrewRule recipeRule(String name, String summary, Function<BRecipe, Result> body) {
-        return new Adapter(name, summary, RuleSubject.Recipe.class,
+    private static BrewRule recipeRule(String name, Function<BRecipe, Result> body) {
+        return new Adapter(name, RuleSubject.Recipe.class,
             subject -> body.apply(((RuleSubject.Recipe) subject).recipe()));
     }
 
-    private static BrewRule fermentRule(String name, String summary, Function<BCauldronRecipe, Result> body) {
-        return new Adapter(name, summary, RuleSubject.Ferment.class,
+    private static BrewRule fermentRule(String name, Function<BCauldronRecipe, Result> body) {
+        return new Adapter(name, RuleSubject.Ferment.class,
             subject -> body.apply(((RuleSubject.Ferment) subject).recipe()));
     }
 
-    private record Adapter(String name, String summary, Class<? extends RuleSubject> kind,
+    private record Adapter(String name, Class<? extends RuleSubject> kind,
                            Function<RuleSubject, Result> body) implements BrewRule {
         @Override
         public boolean handles(RuleSubject subject) {
@@ -696,13 +619,13 @@ final class BrewRules {
 
     /**
      * Collects a rule's inputs and expectations into a {@link BrewSpec.Case}, so that generated
-     * cases run down exactly the same path as hand-written ones.
+     * cases are brewed and checked exactly like hand-written ones.
      */
     private static final class Draft {
         private final String subjectId;
         private final String ruleName;
         private final Map<String, Object> expect = new LinkedHashMap<>();
-        private final List<String> inputs = new ArrayList<>();
+        private String description = "";
         private @Nullable String recipeId;
         private List<String> ingredients = List.of();
         private @Nullable Integer cook;
@@ -726,30 +649,27 @@ final class BrewRules {
 
         Draft cook(int minutes) {
             this.cook = minutes;
-            inputs.add("cook=" + minutes);
             return this;
         }
 
         Draft distill(int runs) {
             this.distill = runs;
-            inputs.add("distill=" + runs);
             return this;
         }
 
         Draft age(BarrelWoodType wood, float years) {
             this.age = List.of(new BrewSpec.AgeStep(wood.name(), years));
-            inputs.add("age=" + trim(years) + "y " + wood.getFormattedName());
             return this;
         }
 
         Draft noAge() {
             this.age = List.of();
-            inputs.add("no barrel");
             return this;
         }
 
-        Draft note(String note) {
-            inputs.add(note);
+        /** What was done to the brew, in the words the report prints. */
+        Draft describe(String text) {
+            this.description = text;
             return this;
         }
 
@@ -762,8 +682,7 @@ final class BrewRules {
             BrewSpec.Case testCase = new BrewSpec.Case(
                 subjectId + " / " + ruleName, recipeId, ingredients, cook, distill, age,
                 Collections.unmodifiableMap(new LinkedHashMap<>(expect)));
-            return new Result.Applied(testCase, inputs.isEmpty() ? "as the recipe asks"
-                : String.join("  ", inputs));
+            return new Result.Applied(testCase, description);
         }
     }
 
@@ -771,7 +690,7 @@ final class BrewRules {
         if (value == Math.rint(value)) {
             return String.valueOf((long) value);
         }
-        return String.format(Locale.ROOT, "%.2f", value);
+        return String.format(Locale.ROOT, "%.1f", value);
     }
 
 }

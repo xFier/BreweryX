@@ -43,20 +43,19 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * The declarative brew tests, as read from {@code brew-tests.yml}.
+ * The hand-written brew tests, as read from {@code brew-tests.yml}.
  * <p>
- * Loading happens in two passes because the first pass has to run before BreweryX is up: the file
- * may name the config folder to brew against. {@link #load} does the structural pass, and
- * {@link #resolve} turns a case's recipe names, ingredients and woods into real objects once the
- * recipes are loaded.
+ * Loading happens in two passes so that a malformed file is reported before BreweryX is booted.
+ * {@link #load} does the structural pass, and {@link #resolve} turns a case's recipe names,
+ * ingredients and woods into real objects once the recipes are loaded.
  */
-public record BrewSpec(@Nullable Path configDir, List<Case> cases, CheckSpec checks) {
+public record BrewSpec(List<Case> cases) {
 
     /** Keys a test case may carry. */
     private static final Set<String> CASE_KEYS =
         new LinkedHashSet<>(List.of("name", "recipe", "ingredients", "cook", "distill", "age", "expect"));
     /** Keys the file itself may carry. */
-    private static final Set<String> ROOT_KEYS = new LinkedHashSet<>(List.of("config", "tests", "checks"));
+    private static final Set<String> ROOT_KEYS = new LinkedHashSet<>(List.of("tests"));
     /** Keys an `age` step may carry. */
     private static final Set<String> AGE_KEYS = new LinkedHashSet<>(List.of("wood", "years"));
 
@@ -145,20 +144,6 @@ public record BrewSpec(@Nullable Path configDir, List<Case> cases, CheckSpec che
             }
         }
 
-        Path configDir = null;
-        Object configValue = rootMap.get("config");
-        if (configValue != null) {
-            if (configValue instanceof String configPath) {
-                Path parsed = Path.of(configPath);
-                Path base = file.toAbsolutePath().getParent();
-                configDir = parsed.isAbsolute() || base == null ? parsed : base.resolve(parsed).normalize();
-            } else {
-                problems.add("`config` should be a path to a plugins/BreweryX folder, but is " + describe(configValue));
-            }
-        }
-
-        CheckSpec checks = CheckSpec.parse(rootMap.get("checks"), problems);
-
         List<Case> cases = new ArrayList<>();
         Object testsValue = rootMap.get("tests");
         if (testsValue != null && !(testsValue instanceof List<?>)) {
@@ -178,16 +163,14 @@ public record BrewSpec(@Nullable Path configDir, List<Case> cases, CheckSpec che
             }
         }
 
-        // A file needs to ask for something: hand-written cases, generated ones, or both.
-        if (cases.isEmpty() && checks.isEmpty() && problems.isEmpty()) {
-            problems.add("no `tests:` cases and no `checks:` section, so there is nothing to run. "
-                + "It should look like:\n" + EXAMPLE);
+        if (cases.isEmpty() && problems.isEmpty()) {
+            problems.add("no `tests:` cases, so there is nothing to run. It should look like:\n" + EXAMPLE);
         }
 
         if (!problems.isEmpty()) {
             throw new SpecException(header, problems);
         }
-        return new BrewSpec(configDir, List.copyOf(cases), checks);
+        return new BrewSpec(List.copyOf(cases));
     }
 
     private static @Nullable Case parseCase(Map<?, ?> map, String label, List<String> problems) {
@@ -331,7 +314,7 @@ public record BrewSpec(@Nullable Path configDir, List<Case> cases, CheckSpec che
      * @return the parameters to brew
      * @throws SpecException if anything named in the case does not exist
      */
-    public SimulationParameters resolve(Case testCase) {
+    public static SimulationParameters resolve(Case testCase) {
         List<String> problems = new ArrayList<>();
         SimulationRequest request = new SimulationRequest();
 
@@ -430,9 +413,6 @@ public record BrewSpec(@Nullable Path configDir, List<Case> cases, CheckSpec che
               recipe: wheatbeer
               expect:
                 quality: 10
-
-          checks:
-            all: standard
         """;
 
 }

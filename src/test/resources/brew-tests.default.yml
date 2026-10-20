@@ -1,330 +1,54 @@
 # =====================================================================================
-#  BreweryX brew tests
+#  BreweryX brew tests                             run them with:   gradlew brewTest
 #
-#  Each case below describes what goes into a cauldron and what should come out.
-#  Run them with:   gradlew brewTest
+#  To check every recipe at once you don't need this file: run  gradlew brewReport
 #
-#  This file was created for you from a template and is yours to edit; it is not
-#  tracked by git. Delete it and run brewTest again to get these examples back.
+#  This file is for the few things you want to pin down yourself -- "brewing this
+#  should give that". It's yours to edit and isn't tracked by git. Delete it and run
+#  brewTest again to get these examples back.
 # =====================================================================================
 #
-#  INPUTS -- what to brew
+#  Each test says what to brew, then what should come out under `expect:`.
 #
-#    recipe        A recipe id or name. Acts as a base: anything you leave out below
-#                  is taken from it (cook time, distill runs, barrel, ingredients).
-#    ingredients   List of items, same syntax as recipes.yml: WHEAT/3, MATERIAL.durability,
-#                  plugin:item/2, or a custom-items id.
-#    cook          Cooking time in minutes.
-#    distill       Number of distill runs.
-#    age           A barrel: {wood: OAK, years: 6}. Give a LIST of these to move the
-#                  brew between barrels part-way through.
+#  What to brew
+#    recipe        Start from a recipe. Anything you don't list below is taken from it.
+#    ingredients   Like recipes.yml:  [WHEAT/3, SUGAR/2]
+#    cook          Minutes in the cauldron.
+#    distill       Times through the still. 0 means never.
+#    age           A barrel:  {wood: OAK, years: 6}.  A list of these moves the brew
+#                  between barrels.  `age: []` means never barrelled.
 #
-#  You need either a `recipe:`, or `ingredients:` plus `cook:`.
+#  What should come out (list only what you care about)
+#    recipe        The drink it should be.
+#    quality       0 to 10, or a range like 8..10
+#    alcohol       A number, or a range.
 #
-#  What omitting something means depends on whether you gave a `recipe:`. Without one,
-#  leaving out `distill` or `age` means the brew is never distilled or barrelled. With
-#  one, it means "whatever the recipe does" -- that is what makes the first example
-#  below a two-line test. To contradict the recipe rather than inherit from it, say so:
+#  Also available: notRecipe, cauldronRecipe, wood, ageTime, distillRuns, effects,
+#  outcome (OK, DISTILL_RUINED or AGE_RUINED). A misspelt key is reported with a
+#  suggestion, so it is safe to experiment.
 #
-#    distill: 0    never distilled, however many runs the recipe asks for
-#    age: []       never barrelled, whatever barrel the recipe asks for
-#
-#  EXPECTATIONS -- what should come out
-#
-#    recipe          Recipe it matched, by id or name. Leave empty to mean "none".
-#    notRecipe       A recipe it must NOT have come out as.
-#    cauldronRecipe  Ferment it matched in the cauldron, by id or name.
-#    notCauldronRecipe  A ferment it must NOT have matched.
-#    quality         0-10. A single number, or an inclusive range like 8..10.
-#    alcohol         Alcohol content. Number or range.
-#    distillRuns     How many times it was distilled.
-#    ageTime         Total time in barrels. Number or range.
-#    wood            Wood the brew ended up tasting of, e.g. BIRCH.
-#    hasRecipe       true if it came out as a real brew rather than an unnamed one.
-#    effects         Potion effects, e.g. [weakness, poison]. Must match exactly.
-#    defects         Everything that cost it quality. Must match exactly, so an empty
-#                    list asserts a flawless brew. Failures print the actual list.
-#    worstDefect     The single biggest quality loss.
-#    outcome         OK, DISTILL_RUINED or AGE_RUINED.
-#
-#  NOTES
-#
-#    - Recipes with ranged amounts (WHEAT/2-4) or ranged effect durations are randomised
-#      when they load, so they will not give the same answer twice. Use ranges, or
-#      avoid them.
-#    - Ingredients from other plugins (mmoitems:..., slimefun:...) cannot be resolved
-#      here, since those plugins are not running.
-#    - `distillTime` is not simulated; only the number of runs matters.
-#    - A barrel under half a day does not age the brew at all -- it keeps whatever the
-#      cauldron or the still gave it. Half-day stints only start counting once they add
-#      up past that, so two 0.3 steps do age it.
-#
-#  CHECKS -- the same questions asked of every recipe
-#
-#    Writing a case per recipe by hand gets old, and most of the interesting numbers can
-#    be worked out from the recipe itself. `checks:` at the bottom of this file picks
-#    rules from a fixed list and applies them to whichever recipes you name; each rule
-#    derives its own inputs and its own expected result from that recipe's cook time,
-#    difficulty and ingredients. `cook-shortest` is 4 minutes for one recipe and 19 for
-#    another, and works out the quality to expect in both cases.
-#
-#    Rules that cannot say anything about a recipe skip themselves and say why -- wood
-#    rules on a recipe that takes any barrel, age rules where difficulty 0 makes being
-#    off by a decade cost nothing. A run prints a block per recipe showing what every
-#    rule made of it, so the skips are as readable as the results.
-#
-#    PRESETS
-#
-#      invariants   only what can never be wrong: brewed right, an ingredient missing,
-#                   the still or the barrel used when the recipe never asked
-#      boundaries   just the edges: the longest and shortest cook and count that still
-#                   match, and the first one past each that does not
-#      standard     the two above plus one-off counts, distill runs, age and wood
-#      all          every rule, including the ones only useful now and then
-#
-#    RULES -- brews
-#
-#      perfect              brewed exactly as the recipe asks: quality 10, no defects
-#      cook-shortest        the shortest cook that still matches
-#      cook-too-short       one minute under that, so it no longer matches
-#      cook-longest         the longest cook that still matches
-#      cook-too-long        one minute over that, so it no longer matches
-#      count-one-under      one item short of the first ingredient
-#      count-one-over       one item too many of the first ingredient
-#      count-limit          the most of the first ingredient that still matches
-#      count-beyond-limit   one item past that, so it no longer matches
-#      ingredient-missing   an ingredient the recipe needs is not in the pot
-#      distill-none         never distilled, though the recipe wants it
-#      distill-fewer        one run short: costs alcohol, not quality
-#      distill-more         one run too many: adds alcohol, not quality
-#      distill-unwanted     distilled though the recipe never asked for it
-#      age-under            pulled from the barrel half a tolerance early
-#      age-over             left in half a tolerance too long
-#      age-beyond           left in so long the age factor bottoms out
-#      age-none             never barrelled, though the recipe wants it
-#      age-unwanted         barrelled though the recipe never asked for it
-#      wood-neighbour       aged in the wood next to the one it wants
-#      wood-worst           aged in the wood furthest from the one it wants
-#
-#    RULES -- ferments
-#
-#      ferment-exact        exactly the ingredients it lists
-#      ferment-abundant     twice as much of everything
-#      ferment-sparse       a single one of everything
-#      ferment-missing      one of its ingredients is not in the pot
-#      ferment-extra        its ingredients plus something it does not use
-#
-#    WHEN A RULE FAILS
-#
-#    Usually because another recipe claimed the brew. Push a recipe away from its ideal
-#    and a simpler overlapping one can score better -- 11 wheat brewed to wheatbeer's
-#    timings comes out as Beer, because that is what 11 wheat is closest to. That is a
-#    real answer about your config, not a broken test. Three ways to respond:
-#
-#      except: [count-limit]     drop that rule; naming a preset drops everything in it
-#      rules: [perfect]          run only what you want
-#      expect:                   keep the rule but say what should really happen
-#        count-limit:
-#          recipe: beer
-#
-#  FREEZING CHECKS
-#
-#    `checks:` re-derives itself every run, so it follows along when you edit a recipe --
-#    which also means it cannot notice BreweryX's own arithmetic changing underneath it.
-#    To pin the numbers down, run:
-#
-#      gradlew brewTest -Pexpand
-#
-#    which writes brew-tests.generated.yml: the same checks spelled out as ordinary cases
-#    with the numbers they came to. Commit that and it becomes a fixed baseline. Run it
-#    with:   gradlew brewTest -PbrewSpec=brew-tests.generated.yml
-#
-#  BREWING AGAINST YOUR OWN SERVER
-#
-#    By default these run against BreweryX's built-in recipes. To use a real server's
-#    recipes instead, either uncomment the line below, or pass the folder on the
-#    command line:   gradlew brewTest -PbreweryConfig=/path/to/plugins/BreweryX
-#    The folder is copied before it is read, so your files are never modified.
-#
-# config: ../server/plugins/BreweryX
+#  To brew against your server's recipes instead of BreweryX's defaults:
+#    gradlew brewTest -PbreweryConfig=C:/path/to/server/plugins/BreweryX
 
 tests:
 
-  # The happy path: brewed exactly as the recipe asks, so nothing is wrong with it.
   - name: Wheatbeer brewed to its recipe
     recipe: wheatbeer
     expect:
       recipe: wheatbeer
       quality: 10
-      alcohol: 5
-      wood: BIRCH
-      ageTime: 2
-      defects: []
 
-  # Wheatbeer needs a barrel, so cooking alone leaves you with a cauldron ferment
-  # rather than a brew. This is what a beer looks like before it is aged.
-  - name: Wheat cooked but never barrelled is only a ferment
-    ingredients: [WHEAT/3]
-    cook: 8
-    expect:
-      recipe:                       # empty means: matched no recipe
-      cauldronRecipe: Fermented wheat
-      hasRecipe: false
-
-  # Distilled, never aged. Also shows how potion effects are asserted.
-  - name: Vodka is distilled three times and never sees a barrel
-    recipe: vodka
-    expect:
-      recipe: vodka
-      quality: 10
-      alcohol: 20
-      distillRuns: 3
-      ageTime: 0
-      effects: [weakness, poison]
-
-  # The full pipeline: cauldron, still and barrel.
-  - name: Whiskey goes through cooking, distilling and a spruce barrel
-    recipe: whiskey
-    expect:
-      recipe: whiskey
-      quality: 10
-      alcohol: 26
-      distillRuns: 2
-      ageTime: 18
-      wood: SPRUCE
-
-  # Quality is rounded, so a small mistake can still show as a perfect 10 while the
-  # brew is not actually flawless. `defects` sees what `quality` rounds away.
-  - name: One wheat too many still rounds up to quality 10
+  - name: One wheat too many is still a good wheatbeer
+    recipe: wheatbeer
     ingredients: [WHEAT/4]
-    cook: 8
-    age:
-      wood: BIRCH
-      years: 2
-    expect:
-      recipe: wheatbeer
-      quality: 10
-      defects: ["WrongCount{4/3 wheat}"]
-
-  # Nowhere near the recipe's 8 minutes, so nothing matches at all.
-  - name: Wildly overcooked wheat is not a brew
-    ingredients: [WHEAT/3]
-    cook: 30
-    expect:
-      hasRecipe: false
-      quality: 0
-
-  # No recipe uses mushrooms, so the cauldron's own ferment is all you get.
-  - name: Mushrooms only ever ferment in the cauldron
-    ingredients: [RED_MUSHROOM/2, BROWN_MUSHROOM/2]
-    cook: 4
-    expect:
-      cauldronRecipe: Mushroom brew
-      hasRecipe: false
-
-  # Two barrels instead of one. The brew keeps the taste of the first barrel it spent
-  # long enough in, so moving it half-way costs quality even though the total time is
-  # right. This is something /brew simulate cannot express.
-  - name: Moving whiskey from oak to spruce half-way spoils it
-    ingredients: [WHEAT/10]
-    cook: 10
-    distill: 2
-    age:
-      - { wood: OAK,    years: 9 }
-      - { wood: SPRUCE, years: 9 }
-    expect:
-      recipe: whiskey
-      ageTime: 18
-      wood: OAK
-      quality: 7
-      alcohol: 22
-      worstDefect: "WrongWood{was Oak, needs Spruce}"
-
-  # Ranges say "somewhere in here", which is what you want when you care that a brew
-  # came out good without pinning the exact number. Taken out of the barrel a little
-  # early, so it is fractionally under-aged -- something the rounded quality hides.
-  - name: Wheatbeer pulled from the barrel early is still a good beer
-    ingredients: [WHEAT/3]
-    cook: 8
-    age:
-      wood: BIRCH
-      years: 1.6
     expect:
       recipe: wheatbeer
       quality: 8..10
-      alcohol: 4..5
-      ageTime: 1.6
-      worstDefect: "AgeMismatch{1.600/2.000}"
 
-  # Wheatbeer is a beer, not a spirit, so the still destroys it. `outcome` asserts how
-  # the run ended, which is more specific than just checking it came out nameless.
   - name: Distilling a wheatbeer ruins it
     ingredients: [WHEAT/3]
     cook: 8
     distill: 3
     expect:
       outcome: DISTILL_RUINED
-      hasRecipe: false
       quality: 0
-      worstDefect: DistillUnnecessary
-
-  # A `recipe:` normally supplies the still and the barrel as well. These two override
-  # it: whiskey's own ingredients and cook time, but neither distilled nor aged, so all
-  # that comes out of the cauldron is the plain ferment.
-  - name: Whiskey that never reaches the still or the barrel
-    recipe: whiskey
-    distill: 0
-    age: []
-    expect:
-      distillRuns: 0
-      ageTime: 0
-      hasRecipe: false
-      cauldronRecipe: Fermented wheat
-      outcome: OK
-
-# =====================================================================================
-#  The standard battery, run against every recipe and every ferment.
-#
-#  This is roughly 470 cases from four lines. The overrides below are the answers to
-#  the handful that BreweryX's own default recipes do not satisfy -- each one a real
-#  overlap between two recipes rather than a broken rule.
-# =====================================================================================
-
-checks:
-  all: standard
-
-  overrides:
-
-    # Wheatbeer and Beer are the same drink at different strengths: 3 wheat against 6,
-    # both cooked 8 minutes. Push wheatbeer's wheat to the top of its range, or its
-    # barrel to the far end of the wood scale, and Beer is simply the better answer.
-    # Rather than dropping these two, say so -- then the day that stops being true,
-    # the test says so too.
-    - recipe: wheatbeer
-      expect:
-        count-limit:
-          recipe: beer
-          quality: 9
-        wood-worst:
-          recipe: beer
-          quality: 9
-
-    # Darkbeer is Beer aged longer in dark oak. Every rule that moves it away from its
-    # barrel hands it back to Beer, which wants any wood at all.
-    - recipe: darkbeer
-      except: [age-under, age-beyond, wood-worst]
-
-    # Apple mead is mead with apples in it, so under-aging it makes it plain Mead.
-    - recipe: ap_mead
-      except: [age-beyond]
-
-    # Golden vodka is vodka plus gold nuggets. Undercook it and the nuggets cost less
-    # than the missing minutes, so plain Vodka wins.
-    - recipe: g_vodka
-      except: [cook-shortest]
-
-    # The cookie ferment can never actually be seen: Hot Chocolate is a cooking-only
-    # recipe for the same cookies, and a recipe always beats a ferment in the cauldron.
-    # `ferment-missing` still holds, so only the three that need it to win are dropped.
-    - ferment: cookie
-      except: [ferment-exact, ferment-abundant, ferment-sparse]
